@@ -1,0 +1,82 @@
+# Shan-D AI Assistant - .gitignore
+# Created by: ◉Ɗєиνιℓ ☠️
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data directories
+data/users/*/
+data/learning/
+data/analytics/
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+shan_d.log
+
+# API Keys and secrets
+secrets/
+keys/
+certificates/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+.tmp
+
+# Model files (too large for git)
+models/
+*.bin
+*.pkl
+*.model
+
+# Created by ◉Ɗєиνιℓ Advanced AI Technology
