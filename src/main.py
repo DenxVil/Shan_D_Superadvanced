@@ -16,6 +16,7 @@ from core.multimodal_processor import MultimodalProcessor
 from core.error_handler import AdvancedErrorHandler, handle_errors
 from bot.telegram_bot import ShanDAdvanced
 from utils.config import load_config
+from src.utils.advanced_security import advanced_security_scan
 
 async def main():
     """Main function to run the bot"""
@@ -29,6 +30,8 @@ async def main():
         await shan_d.initialize()
         
         # Start the bot
+        scan_results = advanced_security_scan()
+        print("Security Scan Results:", scan_results)
         print("🚀 Starting Shan-D Advanced AI Bot...")
         await shan_d.run()
         

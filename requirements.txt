@@ -35,3 +35,11 @@ dataclasses-json>=0.6.0
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
+
+#Security
+bandit
+safety
+
+#webhook
+fastapi
+httpx
