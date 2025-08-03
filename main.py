@@ -349,7 +349,9 @@ class ShanDApplication:
                 from telegram.ext import Updater, CommandHandler
 
                 # Instantiate updater for polling
-                self.updater = Updater(token=telegram_token, use_context=True)
+                from telegram import Bot
+                bot = Bot(token=telegram_token)
+                self.updater = Updater(bot)
                 dispatcher = self.updater.dispatcher
 
                 # /start command handler
