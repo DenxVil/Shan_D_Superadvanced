@@ -1,5 +1,5 @@
 #DENVIL
-
+print("Bot started 👻🤖"  )
 import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
