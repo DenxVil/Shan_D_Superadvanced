@@ -15,7 +15,12 @@ import yaml
 from fastapi import FastAPI, HTTPException
 import uvicorn
 from telegram.ext import ApplicationBuilder, CommandHandler
-
+# Load API keys from environment (or .env)
+api_keys = {
+    "openai": os.getenv("OPENAI_API_KEY"),
+    "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+    # add providers here if the code supports them
+}
 # Ensure src on PYTHONPATH
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
@@ -235,7 +240,7 @@ class ShanDApplication:
             "emotion_engine": AdvancedEmotionEngine(),
             "memory_manager": AdvancedMemoryManager(),
             "learning_engine": ContinuousLearningEngine(),
-            "model_manager": AdvancedModelManager({"debug": True}),
+            "model_manager": AdvancedModelManager(_load_api_keys()),
             "conversation_flow": ShanDConversationFlow(),
             "multimodal_processor": MultimodalProcessor({"debug": True})
         }
