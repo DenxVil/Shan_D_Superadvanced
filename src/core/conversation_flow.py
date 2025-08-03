@@ -187,7 +187,7 @@ class ShanDConversationFlow:
         }
 
     def _analyze_message(self, message: str) -> Dict[str, Any]:
-    """Analyze message characteristics for flow processing"""
+    #Analyze message characteristics for flow processing
     analysis = {
         'length': len(message),
         'word_count': len(message.split()),
