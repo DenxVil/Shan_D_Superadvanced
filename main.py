@@ -9,9 +9,12 @@ import sys
 import asyncio
 import logging
 import traceback
+import signal
+
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
+
 import json
 import yaml
 from fastapi import FastAPI, HTTPException
@@ -61,7 +64,7 @@ class EnhancedLogger:
         self.logger.addHandler(err_h)
         self.logger.addHandler(console)
 
-        # Quiet external libs
+        # Quiet external libraries
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
@@ -236,7 +239,6 @@ class ShanDApplication:
 
             logger.info("✅ Initialization complete")
             return True
-
         except Exception as e:
             logger.error(f"❌ Initialization failed: {e}")
             logger.error(traceback.format_exc())
@@ -268,7 +270,6 @@ class ShanDApplication:
                     logger.debug(f"✅ {name} initialized")
 
             logger.info("✅ Core loaded")
-
         except ImportError as e:
             logger.error(f"❌ Core import failed: {e}")
             self.components = {n: None for n in self.components}
@@ -343,9 +344,9 @@ class ShanDApplication:
                 )
 
             bot_app.add_handler(CommandHandler("start", _start))
+            await bot_app.initialize()
             self.telegram_app = bot_app
             logger.info("✅ Telegram Application built successfully")
-
         except Exception as e:
             logger.error(f"❌ Integration setup failed: {e}")
             logger.error(traceback.format_exc())
@@ -364,54 +365,45 @@ class ShanDApplication:
             return {"status": "unavailable"}
 
 
-async def main():
-    print("\n" + "=" * 80)
-    print("💡 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 💡")
-    print("=" * 80 + "\n")
-
+async def _serve():
+    # Initialize and start services
     app = ShanDApplication()
     if not await app.initialize():
-        return 1
+        sys.exit(1)
 
     cfg = app.config_manager.config
-    host, port = cfg.get("host", "0.0.0.0"), cfg.get("port", 8000)
+    host, port = cfg["host"], cfg["port"]
 
     server = uvicorn.Server(
         config=uvicorn.Config(app.app, host=host, port=port, loop="asyncio")
     )
-    asyncio.create_task(server.serve())
-    logger.info(f"🚀 FastAPI serving on http://{host}:{port}")
+    http_task = asyncio.create_task(server.serve())
 
+    polling_task = None
     if app.telegram_app:
-        asyncio.create_task(app.telegram_app.run_polling())
-        logger.info("🚀 Telegram bot polling started")
-    else:
-        logger.error("⚠️ Telegram app not initialized; skipping polling")
+        polling_task = asyncio.create_task(app.telegram_app.run_polling())
 
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    except KeyboardInterrupt:
-        logger.info("🛑 Application stopped by user")
-        if app.telegram_app:
-            await app.telegram_app.stop()
-        return 0
-    except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}")
-        logger.error(traceback.format_exc())
-        return 1
-    finally:
-        logger.info("📝 Application shutdown completed")
+    # Graceful shutdown on SIGINT/SIGTERM
+    stop_signal = asyncio.Future()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, stop_signal.set_result, None)
 
+    await stop_signal
+    logger.info("🛑 Shutdown signal received")
 
-def run():
-    try:
-        code = asyncio.run(main())
-        sys.exit(code)
-    except Exception as e:
-        logger.error(f"🔥 Critical failure: {e}")
-        sys.exit(1)
+    # Shutdown Telegram bot
+    if polling_task:
+        await app.telegram_app.shutdown()
+        polling_task.cancel()
+
+    # Shutdown HTTP server
+    await server.shutdown()
+    http_task.cancel()
+
+    logger.info("📝 Shutdown complete")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
-    run()
+    asyncio.run(_serve())
