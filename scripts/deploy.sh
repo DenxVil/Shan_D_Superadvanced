@@ -1,50 +1,30 @@
 #!/bin/bash
 # Shan-D Deployment Script
-# Created by: ◉Ɗєиνιℓ 🧑‍💻
+# Created by: ◉Ɗєиνιℓ
 
-echo "🌟 Deploying Shan-D Ultra-Human AI Assistant... 🤖"
+echo "🚀 Deploying Shan-D Ultra-Human AI Assistant..."
 
-# Set up environment
-echo "📦 Setting up environment..."
-python -m venv shan_d_env
-source shan_d_env/bin/activate
+# Pull latest changes
+git pull origin main
 
-# Install dependencies
-echo "📥 Installing dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+# Build Docker image
+echo "🐳 Building Docker image..."
+docker build -t shan-d-ai:latest .
 
-# Download language models
-echo "🧠 Downloading language models..."
-python -m spacy download en_core_web_sm
+# Stop existing container
+echo "🛑 Stopping existing container..."
+docker stop shan-d-ai 2>/dev/null || true
+docker rm shan-d-ai 2>/dev/null || true
 
-# Set up data directories
-echo "📁 Creating data directories..."
-mkdir -p data/users
-mkdir -p data/learning
-mkdir -p data/analytics
-mkdir -p logs
+# Start new container
+echo "▶️ Starting new container..."
+docker run -d \
+    --name shan-d-ai \
+    --env-file .env \
+    -v $(pwd)/data:/app/data \
+    -v $(pwd)/logs:/app/logs \
+    --restart unless-stopped \
+    shan-d-ai:latest
 
-# Check configuration
-echo "⚙️ Checking configuration..."
-if [ ! -f .env ]; then
-    echo "❌ .env file not found! Please copy .env.example to .env and configure it."
-    exit 1
-fi
-
-# Test the application
-echo "🧪 Testing application..."
-python -c "
-import sys
-sys.path.insert(0, 'src')
-from configs.config import Config
-config = Config()
-if not config.validate_config():
-    print('❌ Configuration validation failed!')
-    sys.exit(1)
-print('✅ Configuration is valid!')
-"
-
-echo "✅ Shan-D 👻 deployment completed successfully!"
-echo "🚀 Run 'python main.py' to start the AI assistant"
-echo "🏷️ Created by ◉Ɗєиνιℓ 🧑‍💻 Advanced AI Technology"
+echo "✅ Deployment complete!"
+echo "🏷️ Powered by ◉Ɗєиνιℓ Advanced AI Technology"
