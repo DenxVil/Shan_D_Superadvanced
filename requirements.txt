@@ -42,7 +42,7 @@ safety
 
 #webhook
 fastapi
-https
+httpx
 # Add these for web application:
 aiohttp>=3.8.0
 aiohttp-cors>=0.7.0
