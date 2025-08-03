@@ -1,4 +1,4 @@
-# 🤖 Shan-D - Ultra-Human AI Assistant
+# 🤖 ⵢɧαɳ-Đ - Ultra-Human AI Assistant
 
 
 
@@ -71,51 +71,6 @@ An ultra-enhanced AI assistant with human-like conversation capabilities, advanc
   - `/help`: Detailed guidance.  
   - `/stats`: Performance insights.  
   - `/errorstats`: Error monitoring.
-
-
-  Feature 
-|
- Description 
-|
- Supported Models/APIs 
-|
-|
----------
-|
--------------
-|
------------------------
-|
-|
- Reasoning 
-|
- Step-by-step logic 
-|
- OpenAI o3-mini, Claude 3.5 
-|
-|
- Multimodal 
-|
- Image/Video Analysis 
-|
- Google Gemini 
-|
-|
- Error Fix 
-|
- Auto-recovery 
-|
- Custom Handler with AI Suggestions 
-|
-|
- Speed 
-|
- Fast Responses 
-|
- Gemini Flash 
-|
-
----
 
 ### 🎥 Demo
 
