@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Shan-D: Ultra-Enhanced Human-like AI Assistant with Advanced Learning
-Created by: ◉Ɗєиνιℓ (Harsh)
+Created by: ◉Ɗєиνιℓ 
 Version: 4.0.0 Ultra-Human Enhanced
 Features: User Analysis, Self-Improvement, Adaptive Personalization
 """
@@ -28,7 +28,7 @@ print("""
    🤖 Shan-D - Ultra-Enhanced Human-like AI Assistant
    🧠 Advanced Learning + User Personalization + Self-Improvement
    
-   🏷️  Created by: ◉Ɗєиνιℓ (Harsh)
+   🏷️  Created by: ◉Ɗєиνιℓ 
    🎭  AI Name: Shan-D
    📅  Version: 4.0.0 Ultra-Human Enhanced
    🌍  Features: Complete User Analysis + Adaptive Learning
@@ -113,7 +113,7 @@ class UltraShanDApplication:
             await self.startup_checks()
             
             logger.info("🚀 Initializing Shan-D Ultra-Human AI Assistant...")
-            logger.info("🏷️ Created by: ◉Ɗєиνιℓ (Harsh) - Advanced AI Development")
+            logger.info("🏷️ Created by: ◉Ɗєиνιℓ  - Advanced AI Development")
             
             # Display enhanced branding information
             branding = self.config.get_branding_info()
