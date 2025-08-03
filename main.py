@@ -311,30 +311,42 @@ class ShanDApplication:
         logger.info("✅ Routes configured")
 
     async def _setup_integrations(self):
-        logger.info("🔗 Setting up integrations...")
-        try:
-            token = self.config_manager.config.get("api_keys", {}).get("telegram")
-            if not token:
-                logger.info("⚠️ Telegram not configured")
-                return
+    logger.info("🔗 Setting up integrations...")
+    try:
+        telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
+        if not telegram_token:
+            logger.error("❌ Telegram token not found—skipping bot setup")
+            return
 
-            bot_app = ApplicationBuilder().token(token).build()
+        # Build the Telegram Application
+        bot_app = ApplicationBuilder().token(telegram_token).build()
 
-            async def start_cmd(update, context):
-                await context.bot.send_message(chat_id=update.effective_chat.id,
-                                               text="Hi there! Shan-D bot is alive.")
+        # /start command handler
+        async def _setup_integrations(self):
+    logger.info("🔗 Setting up integrations...")
+    try:
+        telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
+        if not telegram_token:
+            logger.error("❌ Telegram token not found—skipping bot setup")
+            return
 
-            bot_app.add_handler(CommandHandler("start", start_cmd))
+        # Build the Telegram Application
+        bot_app = ApplicationBuilder().token(telegram_token).build()
 
-            # start bot polling alongside HTTP
-            asyncio.create_task(app.telegram_app.run_polling())
-            
-            self.telegram_app = bot_app
-            logger.info("🚀 Telegram bot launched")
-        except Exception as e:
-            logger.error(f"❌ Telegram setup failed: {e}")
-            logger.error(traceback.format_exc())
+        # /start command handler
+        async def _start(update, context):
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="✅ Shan-D bot is alive!"
+            )
+        bot_app.add_handler(CommandHandler("start", _start))
 
+        # Store for later and log
+        self.telegram_app = bot_app
+        logger.info("✅ Telegram Application built successfully")
+    except Exception as e:
+        logger.error(f"❌ Integration setup failed: {e}")
+        logger.error(traceback.format_exc())
     def _memory_usage(self) -> Dict[str, Any]:
         try:
             import psutil
@@ -350,31 +362,37 @@ class ShanDApplication:
 
 
 async def main():
-    print("\n" + "=" * 80)
+    print("\n" + "="*80)
     print("💡 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 💡")
-    print("=" * 80 + "\n")
+    print("="*80 + "\n")
 
     app = ShanDApplication()
     if not await app.initialize():
         return 1
 
-    # Start FastAPI via Uvicorn in background
+    # ——— NEW: launch FastAPI HTTP server ———
     cfg = app.config_manager.config
     host, port = cfg.get("host", "0.0.0.0"), cfg.get("port", 8000)
-    server = uvicorn.Server(config=uvicorn.Config(app.app, host=host, port=port, loop="asyncio"))
+    server = uvicorn.Server(
+        config=uvicorn.Config(app.app, host=host, port=port, loop="asyncio")
+    )
     asyncio.create_task(server.serve())
     logger.info(f"🚀 FastAPI serving on http://{host}:{port}")
 
-    # Keep process alive for both HTTP and Telegram
-    # launch bot polling without blocking
-    )
+    # ——— NEW: start Telegram polling ———
+    if app.telegram_app:
+        asyncio.create_task(app.telegram_app.run_polling())
+        logger.info("🚀 Telegram bot polling started")
+    else:
+        logger.error("⚠️ Telegram app not initialized; skipping polling")
+
+    # Keep alive
     try:
         while True:
             await asyncio.sleep(3600)
     except KeyboardInterrupt:
-        logger.info("🛑 Stopping application")
+        logger.info("🛑 Application stopped by user")
         if app.telegram_app:
-            asyncio.create_task(app.telegram_app.run_polling()
             await app.telegram_app.stop()
         return 0
     except Exception as e:
@@ -382,8 +400,7 @@ async def main():
         logger.error(traceback.format_exc())
         return 1
     finally:
-        logger.info("📝 Shutdown complete")
-
+        logger.info("📝 Application shutdown completed")
 
 def run():
     try:
