@@ -40,7 +40,7 @@ class AdvancedModelManager:
         self.session_pool = None
         self.performance_metrics = {}
         
-    async def _initialize_models(self, api_keys: dict):
+    async def initialize_models(self, api_keys: dict):
         """Initialize model configurations from config"""
         return {
             ModelType.REASONING: ModelConfig(
