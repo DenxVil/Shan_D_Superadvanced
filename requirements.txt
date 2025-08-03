@@ -39,3 +39,7 @@ black>=23.0.0
 #Security
 bandit
 safety
+
+#webhook
+fastapi
+httpx
