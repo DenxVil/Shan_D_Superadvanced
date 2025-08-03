@@ -43,253 +43,42 @@ print("""
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 def log_detailed_error(error, context="General", additional_info=None):
-    """Enhanced error logging with all details shown in console only"""
-    error_details = {
-        'timestamp': datetime.now().isoformat(),
-        'context': context,
-        'error_type': type(error).__name__,
-        'error_message': str(error),
-        'traceback': traceback.format_exc(),
-        'system_info': {
-            'python_version': sys.version,
-            'platform': sys.platform,
-            'working_directory': os.getcwd(),
-            'python_executable': sys.executable,
-            'python_path': sys.path[:5],  # Show first 5 paths
-            'environment_variables': {
-                key: value for key, value in os.environ.items() 
-                if any(keyword in key.upper() for keyword in ['TOKEN', 'API', 'KEY', 'PATH', 'HOME'])
-            }
-        }
-    }
-    
-    if additional_info:
-        error_details['additional_info'] = additional_info
-    
-    # Enhanced console output with full details
-    print(f"\n" + "🚨" + "="*80)
-    print(f"💥 COMPREHENSIVE ERROR ANALYSIS - {context.upper()}")
-    print(f"🚨" + "="*80)
-    
-    print(f"\n⏰ **ERROR TIMESTAMP**")
-    print(f"   📅 Date/Time: {error_details['timestamp']}")
-    print(f"   🏷️ Context: {context}")
-    
-    print(f"\n🔥 **ERROR IDENTIFICATION**")
-    print(f"   🏷️ Error Type: {error_details['error_type']}")
-    print(f"   📝 Error Message: {error_details['error_message']}")
-    print(f"   🎯 Error Class: {type(error).__module__}.{type(error).__name__}")
-    
-    if hasattr(error, 'args') and error.args:
-        print(f"   📋 Error Arguments: {error.args}")
-    
-    print(f"\n🖥️ **SYSTEM ENVIRONMENT**")
-    print(f"   🐍 Python Version: {error_details['system_info']['python_version']}")
-    print(f"   💻 Platform: {error_details['system_info']['platform']}")
-    print(f"   📂 Working Directory: {error_details['system_info']['working_directory']}")
-    print(f"   🔧 Python Executable: {error_details['system_info']['python_executable']}")
-    
-    print(f"\n🛤️ **PYTHON PATH (First 5 entries)**")
-    for i, path in enumerate(error_details['system_info']['python_path'], 1):
-        print(f"   {i}. {path}")
-    
-    print(f"\n🔑 **RELEVANT ENVIRONMENT VARIABLES**")
-    env_vars = error_details['system_info']['environment_variables']
-    if env_vars:
-        for key, value in env_vars.items():
-            # Mask sensitive information
-            if any(sensitive in key.upper() for sensitive in ['TOKEN', 'KEY', 'PASSWORD']):
-                masked_value = value[:4] + "*" * (len(value) - 8) + value[-4:] if len(value) > 8 else "*" * len(value)
-                print(f"   🔐 {key}: {masked_value}")
-            else:
-                print(f"   📄 {key}: {value}")
-    else:
-        print(f"   ℹ️ No relevant environment variables found")
-    
-    if additional_info:
-        print(f"\n🔍 **ADDITIONAL CONTEXT INFORMATION**")
-        if isinstance(additional_info, dict):
-            for key, value in additional_info.items():
-                print(f"   📌 {key}:")
-                if isinstance(value, (dict, list)):
-                    for line in json.dumps(value, indent=6).split('\n'):
-                        print(f"      {line}")
-                else:
-                    print(f"      {value}")
-        else:
-            print(f"   📝 {additional_info}")
-    
-    print(f"\n📚 **COMPLETE STACK TRACE**")
-    print(f"{'─' * 80}")
-    # Format the traceback for better readability
-    traceback_lines = error_details['traceback'].split('\n')
-    for i, line in enumerate(traceback_lines):
-        if line.strip():
-            if line.startswith('  File'):
-                print(f"📁 {line}")
-            elif line.startswith('    '):
-                print(f"💻 {line}")
-            elif 'Error:' in line or 'Exception:' in line:
-                print(f"🔴 {line}")
-            else:
-                print(f"📄 {line}")
-    print(f"{'─' * 80}")
-    
-    print(f"\n🎯 **ERROR RESOLUTION SUGGESTIONS**")
-    error_type = type(error).__name__
-    if error_type == "ImportError":
-        print(f"   💡 1. Check if the module is installed: pip list | grep <module_name>")
-        print(f"   💡 2. Verify module path is correct")
-        print(f"   💡 3. Install missing package: pip install <package_name>")
-        print(f"   💡 4. Check if virtual environment is activated")
-    elif error_type == "ModuleNotFoundError":
-        print(f"   💡 1. Install the missing module: pip install <module_name>")
-        print(f"   💡 2. Check sys.path includes the module location")
-        print(f"   💡 3. Verify spelling of module name")
-    elif error_type == "AttributeError":
-        print(f"   💡 1. Check if the attribute exists in the object")
-        print(f"   💡 2. Verify object is properly initialized")
-        print(f"   💡 3. Check for typos in attribute name")
-    elif error_type == "SyntaxError":
-        print(f"   💡 1. Check for missing brackets, quotes, or colons")
-        print(f"   💡 2. Verify indentation is correct")
-        print(f"   💡 3. Look for unclosed strings or comments")
-    else:
-        print(f"   💡 1. Check the error message for specific guidance")
-        print(f"   💡 2. Verify all required dependencies are installed")
-        print(f"   💡 3. Check file permissions and paths")
-    
-    print(f"\n📋 **DEBUGGING CHECKLIST**")
-    print(f"   ☐ Verify all imports are correct")
-    print(f"   ☐ Check file paths and permissions")
-    print(f"   ☐ Ensure all dependencies are installed")
-    print(f"   ☐ Validate configuration files")
-    print(f"   ☐ Check environment variables")
-    print(f"   ☐ Verify Python version compatibility")
-    
-    print(f"\n🚨" + "="*80)
-    print(f"💥 END OF ERROR ANALYSIS - {context.upper()}")
-    print(f"🚨" + "="*80 + "\n")
+    """Simple error logging with essential details only"""
+    print(f"\n🚨 ERROR in {context}: {type(error).__name__}")
+    print(f"💥 Message: {str(error)}")
+    print(f"📍 Location: {traceback.format_exc().splitlines()[-2].strip() if traceback.format_exc().splitlines() else 'Unknown'}")
 
 def check_import_dependencies():
-    """Enhanced dependency checking with detailed console error reporting"""
-    print("🔍 Checking import dependencies...")
+    """Simple dependency checking"""
+    print("🔍 Checking imports...")
     
     required_modules = [
         ('src.telegram.bot', 'ShanDBot'),
-        ('configs.config', 'Config'),
-        ('utils.helpers', ['setup_logging', 'check_dependencies']),
         ('core.shan_d_enhanced', 'EnhancedShanD'),
-        ('core.command_processor', 'AdvancedCommandProcessor'),
-        ('storage.user_data_manager', 'UserDataManager'),
-        ('core.learning_engine', 'ContinuousLearningEngine')
+        ('core.conversation_flow', 'ShanDConversationFlow'),
     ]
     
-    missing_modules = []
-    import_errors = {}
-    
-    for module_info in required_modules:
-        module_name = module_info[0]
-        required_items = module_info[1] if isinstance(module_info[1], list) else [module_info[1]]
-        
+    for module_name, class_name in required_modules:
         try:
-            print(f"   ✓ Checking {module_name}...")
-            module = __import__(module_name, fromlist=required_items)
-            
-            for item in required_items:
-                if not hasattr(module, item):
-                    missing_modules.append(f"{module_name}.{item}")
-                    print(f"   ❌ Missing: {module_name}.{item}")
-                else:
-                    print(f"   ✅ Found: {module_name}.{item}")
-                    
+            __import__(module_name, fromlist=[class_name])
+            print(f"   ✅ {module_name}.{class_name}")
         except ImportError as e:
-            missing_modules.append(module_name)
-            import_errors[module_name] = str(e)
-            print(f"   ❌ Failed to import {module_name}: {e}")
-        except Exception as e:
-            import_errors[module_name] = f"Unexpected error: {str(e)}"
-            print(f"   ⚠️ Unexpected error importing {module_name}: {e}")
-    
-    if missing_modules or import_errors:
-        error_details = {
-            'missing_modules': missing_modules,
-            'import_errors': import_errors,
-            'python_path': sys.path,
-            'current_directory': os.getcwd(),
-            'src_directory_exists': os.path.exists('src'),
-            'directory_contents': os.listdir('.') if os.path.exists('.') else [],
-            'src_contents': os.listdir('src') if os.path.exists('src') else 'src directory not found'
-        }
-        
-        log_detailed_error(
-            ImportError(f"Missing modules: {missing_modules}"),
-            "Module Import Check",
-            error_details
-        )
-        
-        print("📦 Attempting to install requirements...")
-        try:
-            if os.path.exists('requirements.txt'):
-                print("📋 Found requirements.txt, installing...")
-                os.system("pip install -r requirements.txt")
-                print("✅ Requirements installation completed")
-            else:
-                print("⚠️ No requirements.txt found")
-                print("📋 Common packages you might need:")
-                print("   pip install python-telegram-bot")
-                print("   pip install aiohttp")
-                print("   pip install asyncio")
-        except Exception as install_error:
-            log_detailed_error(install_error, "Requirements Installation")
-        
-        return False
-    
-    print("✅ All import dependencies satisfied")
+            print(f"   ❌ {module_name}: {e}")
+            return False
     return True
 
-# Enhanced import section with detailed error handling
+# Simplified startup with basic error handling
 try:
     if not check_import_dependencies():
-        print("❌ Dependency check failed. Please check the error details above.")
         sys.exit(1)
     
-    # Import all required modules
     from src.telegram.bot import ShanDBot
-    from configs.config import Config
-    from utils.helpers import setup_logging, check_dependencies
     from core.shan_d_enhanced import EnhancedShanD
-    from core.command_processor import AdvancedCommandProcessor
-    from storage.user_data_manager import UserDataManager
-    from core.learning_engine import ContinuousLearningEngine
-    
-    print("✅ All modules imported successfully")
+    # ... other imports
     
 except ImportError as e:
-    log_detailed_error(e, "Module Import", {
-        'attempted_modules': [
-            'src.telegram.bot', 'configs.config', 'utils.helpers',
-            'core.shan_d_enhanced', 'core.command_processor',
-            'storage.user_data_manager', 'core.learning_engine'
-        ],
-        'python_path': sys.path,
-        'working_directory': os.getcwd(),
-        'available_files': os.listdir('.') if os.path.exists('.') else []
-    })
+    log_detailed_error(e, "Import")
     sys.exit(1)
-except Exception as e:
-    log_detailed_error(e, "Unexpected Import Error")
-    sys.exit(1)
-
-# Setup enhanced logging with ◉Ɗєиνιℓ branding
-try:
-    logger = setup_logging()
-    print("✅ Logging system initialized")
-except Exception as e:
-    log_detailed_error(e, "Logging Setup")
-    # Continue without enhanced logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
 
 class UltraShanDApplication:
     """Ultra-enhanced application manager with complete learning capabilities"""
