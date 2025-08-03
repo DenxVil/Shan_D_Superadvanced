@@ -11,7 +11,7 @@
 </p>
 
 <h1 align="center">
-  <img src="https://files.catbox.moe/4zddl3.jpg" alt="Shan-D Logo" width="200" j,  height="200">
+  <img src="https://ibb.co/VYqZTk6d" alt="Shan-D Logo" width="200" j,  height="200">
   <br>
   Shan-D Superadvanced AI
 </h1>
