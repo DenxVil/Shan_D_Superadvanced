@@ -312,11 +312,11 @@ class ShanDApplication:
             from src.core.multimodal_processor import MultimodalProcessor
             
             # Initialize components
-            self.components['emotion_engine'] = EmotionEngine()
-            self.components['memory_manager'] = MemoryManager()
-            self.components['learning_engine'] = LearningEngine()
-            self.components['model_manager'] = ModelManager()
-            self.components['conversation_flow'] = ConversationFlow()
+            self.components['emotion_engine'] = AdvancedEmotionEngine()
+            self.components['memory_manager'] = AdvancedMemoryManager()
+            self.components['learning_engine'] = ContinuousLearningEngine()
+            self.components['model_manager'] = AdvancedModelManager()
+            self.components['conversation_flow'] = ShanDConversationFlow()
             self.components['multimodal_processor'] = MultimodalProcessor()
             
             # Initialize each component
