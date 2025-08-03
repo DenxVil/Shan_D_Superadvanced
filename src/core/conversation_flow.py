@@ -1,8 +1,8 @@
-
 #Denvil
 
 """
 Shan-D Conversation Flow Manager
+
 Manages natural conversation flow, context switching, and dialogue coherence
 """
 
@@ -47,7 +47,7 @@ class ShanDConversationFlow:
         self.user_flows: Dict[str, ConversationFlow] = {}
         self.state_transitions = self._init_state_transitions()
         self.engagement_indicators = self._init_engagement_indicators()
-        
+
     def _init_state_transitions(self) -> Dict[ConversationState, List[ConversationState]]:
         """Initialize valid state transitions"""
         return {
@@ -100,7 +100,7 @@ class ShanDConversationFlow:
                 ConversationState.ACTIVE
             ]
         }
-    
+
     def _init_engagement_indicators(self) -> Dict[str, Dict[str, float]]:
         """Initialize engagement level indicators"""
         return {
@@ -124,7 +124,7 @@ class ShanDConversationFlow:
                 'generic_responses': 0.2
             }
         }
-    
+
     def get_user_flow(self, user_id: str) -> ConversationFlow:
         """Get or create conversation flow for user"""
         if user_id not in self.user_flows:
@@ -139,11 +139,12 @@ class ShanDConversationFlow:
                 last_transition=datetime.now(),
                 pending_topics=[]
             )
+        
         return self.user_flows[user_id]
-    
-    async def process_message_flow(self, user_id: str, message: str, 
-                                 emotion_data: Dict[str, Any], 
-                                 context: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def process_message_flow(self, user_id: str, message: str,
+                                   emotion_data: Dict[str, Any],
+                                   context: Dict[str, Any]) -> Dict[str, Any]:
         """Process message and update conversation flow"""
         flow = self.get_user_flow(user_id)
         
@@ -152,8 +153,8 @@ class ShanDConversationFlow:
         
         # Update engagement level
         flow.engagement_level = self._calculate_engagement(
-            flow.engagement_level, 
-            message_analysis, 
+            flow.engagement_level,
+            message_analysis,
             emotion_data
         )
         
@@ -186,7 +187,7 @@ class ShanDConversationFlow:
             'topic_thread': flow.topic_thread[-3:],  # Last 3 topics
             'pending_topics': flow.pending_topics
         }
-    
+
     def _analyze_message(self, message: str) -> Dict[str, Any]:
         """Analyze message characteristics for flow processing"""
         analysis = {
@@ -194,7 +195,7 @@ class ShanDConversationFlow:
             'word_count': len(message.split()),
             'question_count': message.count('?'),
             'exclamation_count': message.count('!'),
-            'has_code': ' '
+            'has_code': '```
             'has_personal_info': any(word in message.lower() for word in ['i am', 'my', 'me', 'personally']),
             'has_problem': any(word in message.lower() for word in ['problem', 'issue', 'help', 'stuck', 'error']),
             'has_creative_request': any(word in message.lower() for word in ['create', 'design', 'brainstorm', 'idea']),
@@ -204,7 +205,7 @@ class ShanDConversationFlow:
         }
         
         return analysis
-    
+
     def _calculate_complexity(self, message: str) -> float:
         """Calculate message complexity score"""
         words = message.split()
@@ -217,12 +218,11 @@ class ShanDConversationFlow:
         technical_terms = len([word for word in words if len(word) > 8])
         
         complexity = (avg_word_length / 10) + (len(words) / 100) + (technical_terms / len(words))
-        
         return min(complexity, 1.0)
-    
-    def _calculate_engagement(self, current_engagement: float, 
-                           message_analysis: Dict[str, Any], 
-                           emotion_data: Dict[str, Any]) -> float:
+
+    def _calculate_engagement(self, current_engagement: float,
+                              message_analysis: Dict[str, Any],
+                              emotion_data: Dict[str, Any]) -> float:
         """Calculate updated engagement level"""
         engagement_delta = 0.0
         
@@ -248,13 +248,12 @@ class ShanDConversationFlow:
         
         # Update with momentum consideration
         new_engagement = current_engagement + (engagement_delta * 0.7)  # Smooth changes
-        
         return max(0.0, min(1.0, new_engagement))
-    
+
     async def _determine_state_transition(self, flow: ConversationFlow,
-                                        message_analysis: Dict[str, Any],
-                                        emotion_data: Dict[str, Any],
-                                        context: Dict[str, Any]) -> ConversationState:
+                                          message_analysis: Dict[str, Any],
+                                          emotion_data: Dict[str, Any],
+                                          context: Dict[str, Any]) -> ConversationState:
         """Determine appropriate state transition"""
         current_state = flow.current_state
         
@@ -299,7 +298,7 @@ class ShanDConversationFlow:
                 return ConversationState.WRAPPING_UP
         
         return current_state  # No transition needed
-    
+
     def _update_context_tracking(self, flow: ConversationFlow, message_analysis: Dict[str, Any]):
         """Update context depth and topic thread"""
         # Increment context depth for complex/detailed messages
@@ -327,7 +326,7 @@ class ShanDConversationFlow:
         # Keep topic thread manageable
         if len(flow.topic_thread) > 10:
             flow.topic_thread = flow.topic_thread[-10:]
-    
+
     def _calculate_momentum(self, flow: ConversationFlow, message_analysis: Dict[str, Any]) -> float:
         """Calculate conversation flow momentum"""
         base_momentum = 0.5
@@ -349,11 +348,10 @@ class ShanDConversationFlow:
             recency_boost = max(0, 0.2 - (time_since_transition.seconds / 600))  # Decay over 10 minutes
         
         total_momentum = base_momentum + momentum_boost + context_boost + question_boost + recency_boost
-        
         return max(0.0, min(1.0, total_momentum))
-    
-    def _generate_response_strategy(self, flow: ConversationFlow, 
-                                  message_analysis: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _generate_response_strategy(self, flow: ConversationFlow,
+                                    message_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Generate response strategy based on current flow"""
         strategy = {
             'tone': 'balanced',
@@ -418,7 +416,7 @@ class ShanDConversationFlow:
             strategy['transition_hints'].append('Would you like to explore something new?')
         
         return strategy
-    
+
     def get_flow_summary(self, user_id: str) -> Dict[str, Any]:
         """Get summary of user's conversation flow"""
         if user_id not in self.user_flows:
@@ -435,7 +433,7 @@ class ShanDConversationFlow:
             'conversation_duration': (datetime.now() - flow.last_transition).seconds,
             'flow_health': self._assess_flow_health(flow)
         }
-    
+
     def _assess_flow_health(self, flow: ConversationFlow) -> str:
         """Assess overall health of conversation flow"""
         if flow.engagement_level > 0.7 and flow.flow_momentum > 0.6:
