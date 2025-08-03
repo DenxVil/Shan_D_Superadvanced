@@ -281,9 +281,7 @@ class ShanDApplication:
             # Initialize core components
             await self._initialize_core_components()
             
-            # Setup web interface
-            await self._setup_web_interface()
-            
+       
             # Initialize AI models
             await self._initialize_ai_models()
             
