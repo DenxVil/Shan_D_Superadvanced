@@ -320,7 +320,7 @@ class ShanDApplication:
             self.components['model_manager'] = AdvancedModelManager(config)
             
             self.components['conversation_flow'] = ShanDConversationFlow()
-            self.components['multimodal_processor'] = MultimodalProcessor()
+            self.components['multimodal_processor'] = MultimodalProcessor(config)
             
             # Initialize each component
             for name, component in self.components.items():
