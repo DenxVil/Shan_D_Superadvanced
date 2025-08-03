@@ -281,7 +281,7 @@ class ShanDApplication:
     async def initialize(self) -> bool:
         """Initialize the complete application"""
         self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
-            return True
+             return True
             
         except Exception as e:
             self.logger.error(f"❌ Initialization failed: {str(e)}")
