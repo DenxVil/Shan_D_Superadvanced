@@ -14,6 +14,8 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import json
 import yaml
+import argparse
+from aiohttp import web
 
 # Add src directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -68,6 +70,11 @@ class EnhancedLogger:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
+        try:
+            from src.web_app import create_web_app
+            WEB_APP_AVAILABLE = True
+        except ImportError: 
+            WEB_APP_AVAILABLE = False
     
     def get_logger(self):
         return self.logger
@@ -263,15 +270,22 @@ class ShanDApplication:
     """Main application class integrating all components"""
     
     def __init__(self):
+        self.config = config or {}
+        self.logger = logging.getLogger("ShanD")
+        self.web_app = None
         self.config_manager = ConfigurationManager()
         self.components = {}
         self.is_initialized = False
-        self.app = None
+        self.app = Nonet
         
     async def initialize(self) -> bool:
         """Initialize the complete application"""
-        try:
-            logger.info("🚀 Initializing Shan_D_Superadvanced...")
+        self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Initialization failed: {str(e)}")
+            raise
             
             # Load configurations
             if not self.config_manager.load_configurations():
@@ -290,13 +304,37 @@ class ShanDApplication:
             await self._setup_integrations()
             
             self.is_initialized = True
-            logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
+            self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
+            return True
+            
+        self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Application initialization failed: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
+            self.logger.error(f"❌ Initialization failed: {str(e)}")
+            raise
+    
+    
+    async def initialize_web_app(self):
+        """NEW METHOD: Initialize web application"""
+        if not WEB_APP_AVAILABLE:
+            raise RuntimeError("❌ Web application module not available")
+        
+        try:
+            self.web_app = await create_web_app(self)
+            self.logger.info("✅ Web application initialized successfully")
+            return self.web_app
+        except Exception as e:
+            self.logger.error(f"❌ Web application initialization failed: {str(e)}")
+            raise
+    
+    async def run_web_server(self, host="0.0.0.0", port=8080):
+        """NEW METHOD: Run web server"""
+        if not self.web_app:
+            await self.initialize_web_app()
+        
+        self.logger.info(f"🌐 Starting web server on {host}:{port}")
+        web.run_app(self.web_app, host=host, port=port)
     
     async def _initialize_core_components(self):
         """Initialize core AI components"""
@@ -534,6 +572,7 @@ async def main():
     print("="*80 + "\n")
     
     try:
+        args = parse_args()
         # Step 1: Validate directory structure
         logger.info("🔍 Starting application validation...")
         if not DirectoryStructureManager.validate_and_setup():
@@ -548,7 +587,30 @@ async def main():
         
         # Step 3: Start server
         await app.start_server()
+        shan_d = ShanDAdvanced()  # Use your existing initialization
+        await shan_d.initialize()
         
+        # Run based on mode
+        if args.mode == "web":
+            if not WEB_APP_AVAILABLE:
+                print("❌ Web application not available. Install aiohttp: pip install aiohttp")
+                return
+            await shan_d.run_web_server(host=args.host, port=args.port)
+            
+        elif args.mode == "hybrid":
+            if not WEB_APP_AVAILABLE:
+                print("❌ Web application not available. Running bot only...")
+                # Your existing bot start code
+                return
+            
+            # Start web app in background
+            await shan_d.initialize_web_app()
+            
+            # Start both (this is simplified - you might need to adjust based on your bot implementation)
+            import asyncio
+            bot_task = asyncio.create_task(shan_d.start_bot())  # Your existing bot start method
+            web_task = asyncio.create_task(shan_d.run_web_server(args.host, args.port))
+            await asyncio.gather(bot_task, web_task)
         return 0
         
     except KeyboardInterrupt:
@@ -571,4 +633,9 @@ def run():
         sys.exit(1)
 
 if __name__ == "__main__":
-    run()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 Application stopped by user")
+    except Exception as e:
+        print(f"❌ Failed to start: {str(e)}")
