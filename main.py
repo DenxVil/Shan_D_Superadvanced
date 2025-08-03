@@ -341,35 +341,32 @@ class ShanDApplication:
         logger.info("✅ API routes configured")
 
     async def _setup_integrations(self):
-        """Setup external integrations (Telegram, etc.)"""
-        logger.info("🔗 Setting up integrations...")
-        try:
-            telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
-            if telegram_token:
-                from telegram.ext import Updater, CommandHandler
+    logger.info("🔗 Setting up integrations...")
+    try:
+        telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
+        if telegram_token:
+            from telegram.ext import ApplicationBuilder, CommandHandler
 
-                # Instantiate updater for polling
-                from telegram import Bot
-                bot = Bot(token=telegram_token)
-                self.updater = Updater(bot)
-                dispatcher = self.updater.dispatcher
+            # Build the Application
+            app_bot = ApplicationBuilder().token(telegram_token).build()
 
-                # /start command handler
-                def _start(update, context):
-                    context.bot.send_message(
-                        chat_id=update.effective_chat.id,
-                        text="Hi there! Shan-D bot is alive."
-                    )
-                dispatcher.add_handler(CommandHandler('start', _start))
+            # /start command handler
+            async def _start(update, context):
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Hi there! Shan-D bot is alive."
+                )
+            app_bot.add_handler(CommandHandler("start", _start))
 
-                # Launch polling
-                self.updater.start_polling()
-                logger.info("🚀 Telegram bot launched (polling)")
-            else:
-                logger.info("⚠️ Telegram integration not configured")
-        except Exception as e:
-            logger.error(f"❌ Integration setup failed: {e}")
-            logger.error(traceback.format_exc())
+            # Launch polling
+            await app_bot.initialize()
+            await app_bot.start()
+            logger.info("🚀 Telegram bot launched via Application")
+        else:
+            logger.info("⚠️ Telegram integration not configured")
+    except Exception as e:
+        logger.error(f"❌ Integration setup failed: {e}")
+        logger.error(traceback.format_exc())
 
     def _get_memory_usage(self) -> Dict[str, Any]:
         try:
