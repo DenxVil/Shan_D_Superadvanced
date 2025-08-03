@@ -98,7 +98,7 @@ class AdvancedModelManager:
             total=self.config.get('request_timeout', 60), 
             connect=10
         )
-        self.session_pool = aiohttp.ClientSession(
+        self.session_pool = async with aiohttp.ClientSession(
             connector=connector,
             timeout=timeout
         )
