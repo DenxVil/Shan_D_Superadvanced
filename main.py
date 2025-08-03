@@ -304,7 +304,7 @@ class ShanDApplication:
         
         try:
             # Import and initialize core modules
-            from src.core.emotion_engine import EmotionEngine
+            from src.core.emotion_engine import AdvancedEmotionEngine
             from src.core.memory_manager import MemoryManager
             from src.core.learning_engine import LearningEngine
             from src.core.model_manager import ModelManager
