@@ -42,7 +42,7 @@ safety
 
 #webhook
 fastapi
-unicorn
+uvicorn
 httpx
 # Add these for web application:
 aiohttp>=3.8.0
