@@ -39,6 +39,51 @@ class AdvancedModelManager:
         self.models = self.initialize_models()
         self.session_pool = None
         self.performance_metrics = {}
+
+    def _initialize_models(self) -> Dict[ModelType, ModelConfig]:
+        """Initialize model configurations from config"""
+        return {
+            ModelType.REASONING: ModelConfig(
+                name="gpt-4-turbo",
+                api_endpoint="https://api.openai.com/v1/chat/completions",
+                api_key=self.config.get('openai_api_key', ''),
+                max_tokens=4096,
+                temperature=0.1,
+                model_type=ModelType.REASONING,
+                cost_per_token=0.00003,
+                max_context=128000
+            ),
+            ModelType.CONVERSATION: ModelConfig(
+                name="claude-3-5-sonnet-20241022",
+                api_endpoint="https://api.anthropic.com/v1/messages",
+                api_key=self.config.get('anthropic_api_key', ''),
+                max_tokens=4096,
+                temperature=0.7,
+                model_type=ModelType.CONVERSATION,
+                cost_per_token=0.00003,
+                max_context=200000
+            ),
+            ModelType.MULTIMODAL: ModelConfig(
+                name="gemini-pro-vision",
+                api_endpoint="https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent",
+                api_key=self.config.get('google_api_key', ''),
+                max_tokens=8192,
+                temperature=0.5,
+                model_type=ModelType.MULTIMODAL,
+                cost_per_token=0.000075,
+                max_context=1000000
+            ),
+            ModelType.FAST_RESPONSE: ModelConfig(
+                name="gpt-3.5-turbo",
+                api_endpoint="https://api.openai.com/v1/chat/completions",
+                api_key=self.config.get('openai_api_key', ''),
+                max_tokens=1024,
+                temperature=0.8,
+                model_type=ModelType.FAST_RESPONSE,
+                cost_per_token=0.0000015,
+                max_context=16000
+            )
+        }
         
     async def initialize_models(self, api_keys: dict):
         """Initialize model configurations from config"""
