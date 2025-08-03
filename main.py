@@ -443,41 +443,7 @@ class ShanDApplication:
         except Exception as e:
             return {"error": str(e)}
     
-    async def start_server(self):
-        """Start the web server"""
-        if not self.app:
-            logger.error("â No web application available to start")
-            return False
-        
-        try:
-            import uvicorn
-            
-            config = self.config_manager.config
-            host = config.get('host', '0.0.0.0')
-            port = config.get('port', 8000)
-            
-            logger.info(f"ð Starting Shan_D_Superadvanced server...")
-            logger.info(f"ð Server available at http://{host}:{port}")
-            logger.info(f"ð API documentation at http://{host}:{port}/docs")
-            
-            uvicorn_config = uvicorn.Config(
-                self.app,
-                host=host,
-                port=port,
-                log_level="info" if not config.get('debug') else "debug",
-                access_log=True
-            )
-            
-            server = uvicorn.Server(uvicorn_config)
-            await server.serve()
-            
-        except ImportError:
-            logger.error("â uvicorn not available, cannot start web server")
-            return False
-        except Exception as e:
-            logger.error(f"â Failed to start server: {str(e)}")
-            return False
-
+    
 async def main():
     """Main application entry point"""
     print("\n" + "="*80)
