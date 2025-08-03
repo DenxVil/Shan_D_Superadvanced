@@ -1,208 +1,296 @@
 #!/usr/bin/env python3
 """
-Enhanced Main Application Entry Point
-Addresses directory structure issues and provides robust startup sequence
+Shan_D_Superadvanced - Advanced AI Assistant Main Entry Point
+Enhanced version with full integration of existing modules and robust error handling
 """
 
 import os
 import sys
-import logging
 import asyncio
-from pathlib import Path
-from typing import Dict, List, Optional
+import logging
 import traceback
+from pathlib import Path
 from datetime import datetime
+from typing import Dict, Any, Optional
+import json
+import yaml
 
-# Configure logging first
-def setup_logging():
-    """Setup comprehensive logging configuration"""
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    
-    # Create formatters
-    detailed_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
-    )
-    simple_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
-    )
-    
-    # Setup file handler
-    log_file = log_dir / f"app_{datetime.now().strftime('%Y%m%d')}.log"
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(detailed_formatter)
-    
-    # Setup console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(simple_formatter)
-    
-    # Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-    
-    return root_logger
+# Add src directory to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Initialize logging
-logger = setup_logging()
+class EnhancedLogger:
+    """Enhanced logging system with multiple output streams"""
+    
+    def __init__(self):
+        self.logger = None
+        self._setup_logging()
+    
+    def _setup_logging(self):
+        """Setup comprehensive logging configuration"""
+        # Ensure logs directory exists
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        
+        # Create formatters
+        detailed_formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+        )
+        simple_formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s'
+        )
+        
+        # Setup file handlers
+        log_file = log_dir / f"shan_d_{datetime.now().strftime('%Y%m%d')}.log"
+        error_log_file = log_dir / f"errors_{datetime.now().strftime('%Y%m%d')}.log"
+        
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(detailed_formatter)
+        
+        error_handler = logging.FileHandler(error_log_file, encoding='utf-8')
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(detailed_formatter)
+        
+        # Setup console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(simple_formatter)
+        
+        # Configure root logger
+        self.logger = logging.getLogger("ShanD")
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(error_handler)
+        self.logger.addHandler(console_handler)
+        
+        # Suppress noisy third-party loggers
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("openai").setLevel(logging.WARNING)
+        logging.getLogger("anthropic").setLevel(logging.WARNING)
+    
+    def get_logger(self):
+        return self.logger
 
-class DirectoryManager:
-    """Manages application directory structure"""
+# Initialize global logger
+log_manager = EnhancedLogger()
+logger = log_manager.get_logger()
+
+class DirectoryStructureManager:
+    """Manages application directory structure and validates environment"""
     
     REQUIRED_DIRECTORIES = [
-        "data",
-        "config", 
-        "logs",
-        "temp",
-        "uploads",
-        "models",
-        "cache",
-        "static",
-        "templates"
+        "src", "configs", "api", "logs", "data", "temp", 
+        "cache", "uploads", "models", "static", "templates",
+        "data/conversations", "data/memories", "data/models",
+        "cache/embeddings", "cache/responses"
     ]
     
-    REQUIRED_FILES = [
-        "config/app_config.py",
-        "config/settings.json"
+    CRITICAL_FILES = [
+        "configs/config.py",
+        "configs/settings.yaml", 
+        "src/core/model_manager.py",
+        "src/core/emotion_engine.py",
+        "src/core/learning_engine.py",
+        "src/core/memory_manager.py"
     ]
     
     @classmethod
-    def ensure_directory_structure(cls) -> bool:
-        """
-        Ensure all required directories and files exist
-        Returns True if successful, False otherwise
-        """
-        logger.info("🔍 Starting directory structure verification...")
+    def validate_and_setup(cls) -> bool:
+        """Validate existing structure and create missing components"""
+        logger.info("🔍 Validating application structure...")
         
         try:
-            # Get application root directory
             app_root = Path.cwd()
             logger.info(f"Application root: {app_root}")
             
-            # Create required directories
-            for dir_name in cls.REQUIRED_DIRECTORIES:
-                dir_path = app_root / dir_name
-                dir_path.mkdir(exist_ok=True)
+            # Create missing directories
+            for dir_path in cls.REQUIRED_DIRECTORIES:
+                full_path = app_root / dir_path
+                full_path.mkdir(parents=True, exist_ok=True)
                 logger.debug(f"✅ Directory ensured: {dir_path}")
             
-            # Create required files with default content
-            cls._create_default_files(app_root)
+            # Validate critical files exist
+            missing_files = []
+            for file_path in cls.CRITICAL_FILES:
+                full_path = app_root / file_path
+                if not full_path.exists():
+                    missing_files.append(file_path)
             
-            # Verify permissions
-            cls._verify_permissions(app_root)
+            if missing_files:
+                logger.warning(f"⚠️ Missing critical files: {missing_files}")
+                # Continue anyway as some files might be optional
             
-            logger.info("✅ Directory structure verification completed successfully")
+            # Create runtime configuration if needed
+            cls._ensure_runtime_config(app_root)
+            
+            logger.info("✅ Directory structure validation completed")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Directory structure check failed: {str(e)}")
+            logger.error(f"❌ Directory validation failed: {str(e)}")
             logger.error(traceback.format_exc())
             return False
     
     @classmethod
-    def _create_default_files(cls, app_root: Path):
-        """Create required files with default content"""
+    def _ensure_runtime_config(cls, app_root: Path):
+        """Ensure runtime configuration files exist"""
         
-        # Create default app config
-        config_file = app_root / "config" / "app_config.py"
-        if not config_file.exists():
-            config_content = '''"""
-Application Configuration
-"""
-import os
-from pathlib import Path
-
-# Application settings
-APP_NAME = "Shan_D_Superadvance"
-VERSION = "1.0.0"
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-
-# Paths
-BASE_DIR = Path(__file__).parent.parent
-DATA_DIR = BASE_DIR / "data"
-LOGS_DIR = BASE_DIR / "logs"
-TEMP_DIR = BASE_DIR / "temp"
-
-# API Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# Server Configuration
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", 8000))
-
-# Database Configuration (if needed)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app.db")
-'''
-            config_file.write_text(config_content)
-            logger.info(f"✅ Created default config: {config_file}")
-        
-        # Create default settings
-        settings_file = app_root / "config" / "settings.json"
-        if not settings_file.exists():
-            settings_content = '''{
-    "app": {
-        "name": "Shan_D_Superadvance",
-        "version": "1.0.0",
-        "environment": "production"
-    },
-    "features": {
-        "ai_chat": true,
-        "file_processing": true,
-        "web_interface": true
-    },
-    "limits": {
-        "max_file_size": 10485760,
-        "max_requests_per_minute": 60
-    }
-}'''
-            settings_file.write_text(settings_content)
-            logger.info(f"✅ Created default settings: {settings_file}")
-    
-    @classmethod
-    def _verify_permissions(cls, app_root: Path):
-        """Verify read/write permissions for critical directories"""
-        critical_dirs = ["data", "logs", "temp", "cache"]
-        
-        for dir_name in critical_dirs:
-            dir_path = app_root / dir_name
+        # Create runtime settings if missing
+        runtime_config = app_root / "runtime_config.json"
+        if not runtime_config.exists():
+            config_data = {
+                "startup_time": datetime.now().isoformat(),
+                "version": "2.0.0",
+                "environment": "production",
+                "features": {
+                    "emotion_engine": True,
+                    "learning_system": True,
+                    "memory_persistence": True,
+                    "multimodal_processing": True,
+                    "conversation_flow": True
+                },
+                "performance": {
+                    "max_concurrent_requests": 10,
+                    "memory_limit_mb": 512,
+                    "cache_size_mb": 128
+                }
+            }
             
-            # Test write permission
-            test_file = dir_path / ".permission_test"
-            try:
-                test_file.write_text("test")
-                test_file.unlink()
-                logger.debug(f"✅ Write permission verified: {dir_path}")
-            except Exception as e:
-                raise PermissionError(f"No write permission for {dir_path}: {e}")
+            with open(runtime_config, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, indent=2)
+            
+            logger.info(f"✅ Created runtime configuration: {runtime_config}")
 
-class ApplicationCore:
-    """Main application core management"""
+class ConfigurationManager:
+    """Manages application configuration loading and validation"""
     
     def __init__(self):
+        self.config = {}
+        self.settings = {}
+        
+    def load_configurations(self) -> bool:
+        """Load all configuration files"""
+        try:
+            logger.info("📝 Loading application configurations...")
+            
+            # Load YAML settings
+            self._load_yaml_settings()
+            
+            # Load environment variables
+            self._load_env_config()
+            
+            # Load API keys
+            self._load_api_keys()
+            
+            # Validate configuration
+            self._validate_config()
+            
+            logger.info("✅ Configuration loading completed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Configuration loading failed: {str(e)}")
+            return False
+    
+    def _load_yaml_settings(self):
+        """Load settings from YAML file"""
+        settings_file = Path("configs/settings.yaml")
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                self.settings = yaml.safe_load(f) or {}
+            logger.debug("✅ YAML settings loaded")
+        else:
+            logger.warning("⚠️ settings.yaml not found, using defaults")
+            self.settings = self._get_default_settings()
+    
+    def _load_env_config(self):
+        """Load environment-based configuration"""
+        self.config.update({
+            'debug': os.getenv('DEBUG', 'false').lower() == 'true',
+            'host': os.getenv('HOST', '0.0.0.0'),
+            'port': int(os.getenv('PORT', 8000)),
+            'environment': os.getenv('ENVIRONMENT', 'production')
+        })
+    
+    def _load_api_keys(self):
+        """Load API keys from environment or config files"""
+        api_keys = {
+            'openai': os.getenv('OPENAI_API_KEY'),
+            'anthropic': os.getenv('ANTHROPIC_API_KEY'),
+            'google': os.getenv('GOOGLE_API_KEY'),
+            'telegram': os.getenv('TELEGRAM_BOT_TOKEN')
+        }
+        
+        # Filter out None values
+        self.config['api_keys'] = {k: v for k, v in api_keys.items() if v}
+        
+        logger.info(f"🔑 Loaded {len(self.config['api_keys'])} API keys")
+    
+    def _validate_config(self):
+        """Validate critical configuration values"""
+        if not self.config.get('api_keys'):
+            logger.warning("⚠️ No API keys configured - some features may not work")
+        
+        # Validate port range
+        port = self.config.get('port', 8000)
+        if not (1024 <= port <= 65535):
+            logger.warning(f"⚠️ Invalid port {port}, using default 8000")
+            self.config['port'] = 8000
+    
+    def _get_default_settings(self) -> Dict[str, Any]:
+        """Return default settings if YAML file is missing"""
+        return {
+            'app': {
+                'name': 'Shan_D_Superadvanced',
+                'version': '2.0.0',
+                'description': 'Advanced AI Assistant with Emotional Intelligence'
+            },
+            'features': {
+                'emotion_processing': True,
+                'adaptive_learning': True,
+                'memory_persistence': True,
+                'multimodal_support': True
+            },
+            'limits': {
+                'max_conversation_length': 50,
+                'memory_retention_days': 30,
+                'max_file_size_mb': 10
+            }
+        }
+
+class ShanDApplication:
+    """Main application class integrating all components"""
+    
+    def __init__(self):
+        self.config_manager = ConfigurationManager()
+        self.components = {}
+        self.is_initialized = False
         self.app = None
-        self.config = None
-        self.is_running = False
         
     async def initialize(self) -> bool:
-        """Initialize the application"""
+        """Initialize the complete application"""
         try:
-            logger.info("🚀 Initializing Shan_D_Superadvance application...")
+            logger.info("🚀 Initializing Shan_D_Superadvanced...")
             
-            # Load configuration
-            await self._load_configuration()
+            # Load configurations
+            if not self.config_manager.load_configurations():
+                return False
             
-            # Initialize components
-            await self._initialize_components()
+            # Initialize core components
+            await self._initialize_core_components()
             
-            # Setup routes and services
-            await self._setup_services()
+            # Setup web interface
+            await self._setup_web_interface()
             
-            logger.info("✅ Application initialization completed successfully")
+            # Initialize AI models
+            await self._initialize_ai_models()
+            
+            # Setup integrations
+            await self._setup_integrations()
+            
+            self.is_initialized = True
+            logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
             return True
             
         except Exception as e:
@@ -210,46 +298,64 @@ class ApplicationCore:
             logger.error(traceback.format_exc())
             return False
     
-    async def _load_configuration(self):
-        """Load application configuration"""
+    async def _initialize_core_components(self):
+        """Initialize core AI components"""
+        logger.info("🧠 Initializing core AI components...")
+        
         try:
-            # Import config after ensuring directory structure
-            sys.path.append(str(Path.cwd()))
-            from config.app_config import *
+            # Import and initialize core modules
+            from src.core.emotion_engine import EmotionEngine
+            from src.core.memory_manager import MemoryManager
+            from src.core.learning_engine import LearningEngine
+            from src.core.model_manager import ModelManager
+            from src.core.conversation_flow import ConversationFlow
+            from src.core.multimodal_processor import MultimodalProcessor
             
-            self.config = {
-                'app_name': globals().get('APP_NAME', 'Shan_D_Superadvance'),
-                'version': globals().get('VERSION', '1.0.0'),
-                'debug': globals().get('DEBUG', False),
-                'host': globals().get('HOST', '0.0.0.0'),
-                'port': globals().get('PORT', 8000)
-            }
+            # Initialize components
+            self.components['emotion_engine'] = EmotionEngine()
+            self.components['memory_manager'] = MemoryManager()
+            self.components['learning_engine'] = LearningEngine()
+            self.components['model_manager'] = ModelManager()
+            self.components['conversation_flow'] = ConversationFlow()
+            self.components['multimodal_processor'] = MultimodalProcessor()
             
-            logger.info(f"✅ Configuration loaded: {self.config['app_name']} v{self.config['version']}")
+            # Initialize each component
+            for name, component in self.components.items():
+                if hasattr(component, 'initialize'):
+                    await component.initialize()
+                logger.debug(f"✅ {name} initialized")
+            
+            logger.info("✅ Core components initialized successfully")
             
         except ImportError as e:
-            logger.warning(f"Could not import config, using defaults: {e}")
-            self.config = {
-                'app_name': 'Shan_D_Superadvance',
-                'version': '1.0.0',
-                'debug': False,
-                'host': '0.0.0.0',
-                'port': 8000
-            }
+            logger.error(f"❌ Failed to import core modules: {str(e)}")
+            # Create mock components for graceful degradation
+            self.components = {name: None for name in [
+                'emotion_engine', 'memory_manager', 'learning_engine',
+                'model_manager', 'conversation_flow', 'multimodal_processor'
+            ]}
+        except Exception as e:
+            logger.error(f"❌ Core component initialization failed: {str(e)}")
+            raise
     
-    async def _initialize_components(self):
-        """Initialize application components"""
-        logger.info("🔧 Initializing application components...")
+    async def _setup_web_interface(self):
+        """Setup FastAPI web interface"""
+        logger.info("🌐 Setting up web interface...")
         
-        # Initialize FastAPI if available
         try:
-            from fastapi import FastAPI
+            from fastapi import FastAPI, HTTPException, Depends
             from fastapi.middleware.cors import CORSMiddleware
+            from fastapi.responses import JSONResponse
+            from fastapi.staticfiles import StaticFiles
+            import uvicorn
             
+            # Create FastAPI app
             self.app = FastAPI(
-                title=self.config['app_name'],
-                version=self.config['version'],
-                debug=self.config['debug']
+                title="Shan_D_Superadvanced",
+                version="2.0.0",
+                description="Advanced AI Assistant with Emotional Intelligence",
+                docs_url="/docs",
+                redoc_url="/redoc"
             )
             
             # Add CORS middleware
@@ -261,58 +367,150 @@ class ApplicationCore:
                 allow_headers=["*"],
             )
             
-            logger.info("✅ FastAPI application initialized")
+            # Setup static files
+            if Path("static").exists():
+                self.app.mount("/static", StaticFiles(directory="static"), name="static")
+            
+            # Setup routes
+            await self._setup_routes()
+            
+            logger.info("✅ Web interface setup completed")
             
         except ImportError:
-            logger.warning("FastAPI not available, skipping web interface")
+            logger.warning("⚠️ FastAPI not available, web interface disabled")
+            self.app = None
+        except Exception as e:
+            logger.error(f"❌ Web interface setup failed: {str(e)}")
+            self.app = None
     
-    async def _setup_services(self):
-        """Setup application services and routes"""
-        if self.app:
-            # Health check endpoint
-            @self.app.get("/health")
-            async def health_check():
-                return {
-                    "status": "healthy",
-                    "app": self.config['app_name'],
-                    "version": self.config['version'],
-                    "timestamp": datetime.now().isoformat()
-                }
-            
-            # Root endpoint
-            @self.app.get("/")
-            async def root():
-                return {
-                    "message": f"Welcome to {self.config['app_name']}",
-                    "version": self.config['version'],
-                    "docs": "/docs"
-                }
-            
-            logger.info("✅ Basic routes configured")
-    
-    async def start(self):
-        """Start the application"""
+    async def _setup_routes(self):
+        """Setup API routes"""
         if not self.app:
-            logger.error("❌ No application instance available to start")
+            return
+        
+        @self.app.get("/")
+        async def root():
+            return {
+                "message": "Welcome to Shan_D_Superadvanced",
+                "version": "2.0.0",
+                "status": "operational",
+                "features": list(self.components.keys()),
+                "docs": "/docs"
+            }
+        
+        @self.app.get("/health")
+        async def health_check():
+            component_status = {}
+            for name, component in self.components.items():
+                component_status[name] = "active" if component else "inactive"
+            
+            return {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "components": component_status,
+                "memory_usage": self._get_memory_usage()
+            }
+        
+        @self.app.post("/chat")
+        async def chat_endpoint(message: dict):
+            try:
+                # Process message through conversation flow
+                if self.components.get('conversation_flow'):
+                    response = await self.components['conversation_flow'].process_message(
+                        message.get('text', ''),
+                        message.get('user_id', 'anonymous'),
+                        message.get('context', {})
+                    )
+                else:
+                    response = {
+                        "text": "I'm currently initializing. Please try again in a moment.",
+                        "status": "initializing"
+                    }
+                
+                return response
+                
+            except Exception as e:
+                logger.error(f"Chat endpoint error: {str(e)}")
+                raise HTTPException(status_code=500, detail="Internal server error")
+        
+        logger.info("✅ API routes configured")
+    
+    async def _initialize_ai_models(self):
+        """Initialize AI models and validate API connections"""
+        logger.info("🤖 Initializing AI models...")
+        
+        try:
+            model_manager = self.components.get('model_manager')
+            if model_manager and hasattr(model_manager, 'initialize_models'):
+                await model_manager.initialize_models(
+                    self.config_manager.config.get('api_keys', {})
+                )
+                logger.info("✅ AI models initialized")
+            else:
+                logger.warning("⚠️ Model manager not available")
+                
+        except Exception as e:
+            logger.error(f"❌ AI model initialization failed: {str(e)}")
+    
+    async def _setup_integrations(self):
+        """Setup external integrations (Telegram, etc.)"""
+        logger.info("🔗 Setting up integrations...")
+        
+        try:
+            # Setup Telegram bot if token is available
+            telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
+            if telegram_token:
+                # Import and setup telegram integration
+                logger.info("✅ Telegram integration available")
+            else:
+                logger.info("ℹ️ Telegram integration not configured")
+                
+        except Exception as e:
+            logger.error(f"❌ Integration setup failed: {str(e)}")
+    
+    def _get_memory_usage(self) -> Dict[str, Any]:
+        """Get current memory usage statistics"""
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            
+            return {
+                "rss_mb": round(memory_info.rss / 1024 / 1024, 2),
+                "vms_mb": round(memory_info.vms / 1024 / 1024, 2),
+                "cpu_percent": process.cpu_percent()
+            }
+        except ImportError:
+            return {"status": "psutil not available"}
+        except Exception as e:
+            return {"error": str(e)}
+    
+    async def start_server(self):
+        """Start the web server"""
+        if not self.app:
+            logger.error("❌ No web application available to start")
             return False
         
         try:
             import uvicorn
             
-            logger.info(f"🌟 Starting {self.config['app_name']} server...")
-            logger.info(f"🌐 Server will be available at http://{self.config['host']}:{self.config['port']}")
-            logger.info(f"📚 API documentation at http://{self.config['host']}:{self.config['port']}/docs")
+            config = self.config_manager.config
+            host = config.get('host', '0.0.0.0')
+            port = config.get('port', 8000)
             
-            self.is_running = True
+            logger.info(f"🌟 Starting Shan_D_Superadvanced server...")
+            logger.info(f"🌐 Server available at http://{host}:{port}")
+            logger.info(f"📚 API documentation at http://{host}:{port}/docs")
             
-            # Start server
-            config = uvicorn.Config(
+            uvicorn_config = uvicorn.Config(
                 self.app,
-                host=self.config['host'],
-                port=self.config['port'],
-                log_level="info" if not self.config['debug'] else "debug"
+                host=host,
+                port=port,
+                log_level="info" if not config.get('debug') else "debug",
+                access_log=True
             )
-            server = uvicorn.Server(config)
+            
+            server = uvicorn.Server(uvicorn_config)
             await server.serve()
             
         except ImportError:
@@ -324,24 +522,29 @@ class ApplicationCore:
 
 async def main():
     """Main application entry point"""
-    logger.info("🌟 ====================================================================== 🌟")
-    logger.info("🚀 Starting Shan_D_Superadvance Application")
-    logger.info("🌟 ====================================================================== 🌟")
+    print("\n" + "="*80)
+    print("🌟 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 🌟")
+    print("="*80)
+    print("🧠 Features: Emotion Engine | Learning System | Memory Management")
+    print("🤖 Models: Multi-AI Support | Multimodal Processing")
+    print("🌐 Interface: REST API | Telegram Bot | Web UI")
+    print("="*80 + "\n")
     
     try:
-        # Step 1: Ensure directory structure
-        if not DirectoryManager.ensure_directory_structure():
-            logger.error("❌ Failed to create required directory structure")
+        # Step 1: Validate directory structure
+        logger.info("🔍 Starting application validation...")
+        if not DirectoryStructureManager.validate_and_setup():
+            logger.error("❌ Directory structure validation failed")
             return 1
         
         # Step 2: Initialize application
-        app_core = ApplicationCore()
-        if not await app_core.initialize():
-            logger.error("❌ Failed to initialize application")
+        app = ShanDApplication()
+        if not await app.initialize():
+            logger.error("❌ Application initialization failed")
             return 1
         
-        # Step 3: Start application
-        await app_core.start()
+        # Step 3: Start server
+        await app.start_server()
         
         return 0
         
@@ -352,26 +555,17 @@ async def main():
         logger.error(f"❌ Unexpected error: {str(e)}")
         logger.error(traceback.format_exc())
         return 1
+    finally:
+        logger.info("🏁 Application shutdown completed")
 
-def run_sync():
-    """Synchronous wrapper for the main async function"""
+def run():
+    """Synchronous entry point"""
     try:
-        return asyncio.run(main())
+        exit_code = asyncio.run(main())
+        sys.exit(exit_code)
     except Exception as e:
-        logger.error(f"❌ Failed to run application: {str(e)}")
-        return 1
+        logger.error(f"❌ Critical failure: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    # Print startup banner
-    print("\n" + "="*70)
-    print("🌟 SHAN_D_SUPERADVANCE - ENHANCED STARTUP 🌟")
-    print("="*70 + "\n")
-    
-    exit_code = run_sync()
-    
-    if exit_code == 0:
-        logger.info("✅ Application completed successfully")
-    else:
-        logger.error(f"❌ Application exited with code: {exit_code}")
-    
-    sys.exit(exit_code)
+    run()
