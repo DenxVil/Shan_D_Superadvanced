@@ -455,22 +455,21 @@ async def main():
     print("="*80 + "\n")
     
     try:
-        # Step 1: Validate directory structure
-        logger.info("ð Starting application validation...")
-        if not DirectoryStructureManager.validate_and_setup():
-            logger.error("â Directory structure validation failed")
-            return 1
-        
-        # Step 2: Initialize application
-        app = ShanDApplication()
-        if not await app.initialize():
-            logger.error("â Application initialization failed")
-            return 1
-        
-        # Step 3: Start server
-        await app.start_server()
-        
-        return 0
+        from telegram import Bot
+from telegram.ext import Updater, CommandHandler
+
+updater = Updater(token=telegram_token, use_context=True)
+dispatcher = updater.dispatcher
+
+# Example: Add a /start command handler
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="Hi there! Shan-D bot is alive.")
+dispatcher.add_handler(CommandHandler('start', start))
+
+# Launch polling
+updater.start_polling()
+logger.info("🚀 Telegram bot launched (polling)")
         
     except KeyboardInterrupt:
         logger.info("ð Application stopped by user")
