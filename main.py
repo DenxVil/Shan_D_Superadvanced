@@ -306,7 +306,7 @@ class ShanDApplication:
             # Import and initialize core modules
             from src.core.emotion_engine import AdvancedEmotionEngine
             from src.core.memory_manager import AdvancedMemoryManager
-            from src.core.learning_engine import ContinousLearningEngine
+            from src.core.learning_engine import LearningEngine
             from src.core.model_manager import AdvancedModelManager
             from src.core.conversation_flow import ShanDConversationFlow
             from src.core.multimodal_processor import MultimodalProcessor
