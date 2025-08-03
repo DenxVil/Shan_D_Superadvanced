@@ -43,7 +43,7 @@ print("""
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 def log_detailed_error(error, context="General", additional_info=None):
-    """Enhanced error logging with full details"""
+    """Enhanced error logging with all details shown in console only"""
     error_details = {
         'timestamp': datetime.now().isoformat(),
         'context': context,
@@ -54,45 +54,125 @@ def log_detailed_error(error, context="General", additional_info=None):
             'python_version': sys.version,
             'platform': sys.platform,
             'working_directory': os.getcwd(),
-            'environment_variables': dict(os.environ)
+            'python_executable': sys.executable,
+            'python_path': sys.path[:5],  # Show first 5 paths
+            'environment_variables': {
+                key: value for key, value in os.environ.items() 
+                if any(keyword in key.upper() for keyword in ['TOKEN', 'API', 'KEY', 'PATH', 'HOME'])
+            }
         }
     }
     
     if additional_info:
         error_details['additional_info'] = additional_info
     
-    # Log to console with colors
-    print(f"\n🚨 {'='*60}")
-    print(f"💥 DETAILED ERROR REPORT - {context}")
-    print(f"🚨 {'='*60}")
-    print(f"⏰ Timestamp: {error_details['timestamp']}")
-    print(f"🏷️ Error Type: {error_details['error_type']}")
-    print(f"📝 Error Message: {error_details['error_message']}")
-    print(f"📍 Context: {context}")
+    # Enhanced console output with full details
+    print(f"\n" + "🚨" + "="*80)
+    print(f"💥 COMPREHENSIVE ERROR ANALYSIS - {context.upper()}")
+    print(f"🚨" + "="*80)
+    
+    print(f"\n⏰ **ERROR TIMESTAMP**")
+    print(f"   📅 Date/Time: {error_details['timestamp']}")
+    print(f"   🏷️ Context: {context}")
+    
+    print(f"\n🔥 **ERROR IDENTIFICATION**")
+    print(f"   🏷️ Error Type: {error_details['error_type']}")
+    print(f"   📝 Error Message: {error_details['error_message']}")
+    print(f"   🎯 Error Class: {type(error).__module__}.{type(error).__name__}")
+    
+    if hasattr(error, 'args') and error.args:
+        print(f"   📋 Error Arguments: {error.args}")
+    
+    print(f"\n🖥️ **SYSTEM ENVIRONMENT**")
+    print(f"   🐍 Python Version: {error_details['system_info']['python_version']}")
+    print(f"   💻 Platform: {error_details['system_info']['platform']}")
+    print(f"   📂 Working Directory: {error_details['system_info']['working_directory']}")
+    print(f"   🔧 Python Executable: {error_details['system_info']['python_executable']}")
+    
+    print(f"\n🛤️ **PYTHON PATH (First 5 entries)**")
+    for i, path in enumerate(error_details['system_info']['python_path'], 1):
+        print(f"   {i}. {path}")
+    
+    print(f"\n🔑 **RELEVANT ENVIRONMENT VARIABLES**")
+    env_vars = error_details['system_info']['environment_variables']
+    if env_vars:
+        for key, value in env_vars.items():
+            # Mask sensitive information
+            if any(sensitive in key.upper() for sensitive in ['TOKEN', 'KEY', 'PASSWORD']):
+                masked_value = value[:4] + "*" * (len(value) - 8) + value[-4:] if len(value) > 8 else "*" * len(value)
+                print(f"   🔐 {key}: {masked_value}")
+            else:
+                print(f"   📄 {key}: {value}")
+    else:
+        print(f"   ℹ️ No relevant environment variables found")
     
     if additional_info:
-        print(f"ℹ️ Additional Info: {json.dumps(additional_info, indent=2)}")
+        print(f"\n🔍 **ADDITIONAL CONTEXT INFORMATION**")
+        if isinstance(additional_info, dict):
+            for key, value in additional_info.items():
+                print(f"   📌 {key}:")
+                if isinstance(value, (dict, list)):
+                    for line in json.dumps(value, indent=6).split('\n'):
+                        print(f"      {line}")
+                else:
+                    print(f"      {value}")
+        else:
+            print(f"   📝 {additional_info}")
     
-    print(f"\n📚 Full Traceback:")
-    print(error_details['traceback'])
+    print(f"\n📚 **COMPLETE STACK TRACE**")
+    print(f"{'─' * 80}")
+    # Format the traceback for better readability
+    traceback_lines = error_details['traceback'].split('\n')
+    for i, line in enumerate(traceback_lines):
+        if line.strip():
+            if line.startswith('  File'):
+                print(f"📁 {line}")
+            elif line.startswith('    '):
+                print(f"💻 {line}")
+            elif 'Error:' in line or 'Exception:' in line:
+                print(f"🔴 {line}")
+            else:
+                print(f"📄 {line}")
+    print(f"{'─' * 80}")
     
-    print(f"\n🖥️ System Information:")
-    print(f"   Python Version: {sys.version}")
-    print(f"   Platform: {sys.platform}")
-    print(f"   Working Directory: {os.getcwd()}")
-    print(f"🚨 {'='*60}\n")
+    print(f"\n🎯 **ERROR RESOLUTION SUGGESTIONS**")
+    error_type = type(error).__name__
+    if error_type == "ImportError":
+        print(f"   💡 1. Check if the module is installed: pip list | grep <module_name>")
+        print(f"   💡 2. Verify module path is correct")
+        print(f"   💡 3. Install missing package: pip install <package_name>")
+        print(f"   💡 4. Check if virtual environment is activated")
+    elif error_type == "ModuleNotFoundError":
+        print(f"   💡 1. Install the missing module: pip install <module_name>")
+        print(f"   💡 2. Check sys.path includes the module location")
+        print(f"   💡 3. Verify spelling of module name")
+    elif error_type == "AttributeError":
+        print(f"   💡 1. Check if the attribute exists in the object")
+        print(f"   💡 2. Verify object is properly initialized")
+        print(f"   💡 3. Check for typos in attribute name")
+    elif error_type == "SyntaxError":
+        print(f"   💡 1. Check for missing brackets, quotes, or colons")
+        print(f"   💡 2. Verify indentation is correct")
+        print(f"   💡 3. Look for unclosed strings or comments")
+    else:
+        print(f"   💡 1. Check the error message for specific guidance")
+        print(f"   💡 2. Verify all required dependencies are installed")
+        print(f"   💡 3. Check file permissions and paths")
     
-    # Save to error log file
-    try:
-        os.makedirs("logs", exist_ok=True)
-        with open(f"logs/error_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", 'w') as f:
-            json.dump(error_details, f, indent=2)
-        print(f"💾 Error details saved to logs directory")
-    except Exception as save_error:
-        print(f"⚠️ Could not save error log: {save_error}")
+    print(f"\n📋 **DEBUGGING CHECKLIST**")
+    print(f"   ☐ Verify all imports are correct")
+    print(f"   ☐ Check file paths and permissions")
+    print(f"   ☐ Ensure all dependencies are installed")
+    print(f"   ☐ Validate configuration files")
+    print(f"   ☐ Check environment variables")
+    print(f"   ☐ Verify Python version compatibility")
+    
+    print(f"\n🚨" + "="*80)
+    print(f"💥 END OF ERROR ANALYSIS - {context.upper()}")
+    print(f"🚨" + "="*80 + "\n")
 
 def check_import_dependencies():
-    """Enhanced dependency checking with detailed error reporting"""
+    """Enhanced dependency checking with detailed console error reporting"""
     print("🔍 Checking import dependencies...")
     
     required_modules = [
@@ -138,7 +218,8 @@ def check_import_dependencies():
             'python_path': sys.path,
             'current_directory': os.getcwd(),
             'src_directory_exists': os.path.exists('src'),
-            'directory_contents': os.listdir('.') if os.path.exists('.') else []
+            'directory_contents': os.listdir('.') if os.path.exists('.') else [],
+            'src_contents': os.listdir('src') if os.path.exists('src') else 'src directory not found'
         }
         
         log_detailed_error(
@@ -150,10 +231,15 @@ def check_import_dependencies():
         print("📦 Attempting to install requirements...")
         try:
             if os.path.exists('requirements.txt'):
+                print("📋 Found requirements.txt, installing...")
                 os.system("pip install -r requirements.txt")
                 print("✅ Requirements installation completed")
             else:
                 print("⚠️ No requirements.txt found")
+                print("📋 Common packages you might need:")
+                print("   pip install python-telegram-bot")
+                print("   pip install aiohttp")
+                print("   pip install asyncio")
         except Exception as install_error:
             log_detailed_error(install_error, "Requirements Installation")
         
@@ -165,7 +251,7 @@ def check_import_dependencies():
 # Enhanced import section with detailed error handling
 try:
     if not check_import_dependencies():
-        print("❌ Dependency check failed. Please check the error logs.")
+        print("❌ Dependency check failed. Please check the error details above.")
         sys.exit(1)
     
     # Import all required modules
@@ -187,7 +273,8 @@ except ImportError as e:
             'storage.user_data_manager', 'core.learning_engine'
         ],
         'python_path': sys.path,
-        'working_directory': os.getcwd()
+        'working_directory': os.getcwd(),
+        'available_files': os.listdir('.') if os.path.exists('.') else []
     })
     sys.exit(1)
 except Exception as e:
@@ -227,7 +314,8 @@ class UltraShanDApplication:
         except Exception as e:
             log_detailed_error(e, "Application Initialization", {
                 'config_loaded': hasattr(self, 'config'),
-                'available_attributes': dir(self)
+                'available_attributes': dir(self),
+                'config_type': type(self.config).__name__ if hasattr(self, 'config') else 'N/A'
             })
             raise
 
@@ -253,8 +341,8 @@ class UltraShanDApplication:
             print("🔧 Validating configuration...")
             config_issues = []
             
-            if not self.config.TELEGRAM_TOKEN:
-                config_issues.append("TELEGRAM_TOKEN not found in environment")
+            if not hasattr(self.config, 'TELEGRAM_TOKEN') or not self.config.TELEGRAM_TOKEN:
+                config_issues.append("TELEGRAM_TOKEN not found in environment or config")
             
             if not hasattr(self.config, 'get_branding_info'):
                 config_issues.append("get_branding_info method missing from config")
@@ -266,20 +354,26 @@ class UltraShanDApplication:
                     {
                         'issues': config_issues,
                         'config_attributes': dir(self.config),
-                        'environment_vars': [k for k in os.environ.keys() if 'TOKEN' in k.upper()]
+                        'config_type': type(self.config).__name__,
+                        'environment_vars': [k for k in os.environ.keys() if 'TOKEN' in k.upper()],
+                        'config_dict': vars(self.config) if hasattr(self.config, '__dict__') else 'No __dict__ available'
                     }
                 )
                 raise RuntimeError(f"Configuration issues: {config_issues}")
             
             # Create data directories with error handling
             print("📁 Creating data directories...")
-            directories = ["data/users", "data/learning", "data/analytics", "logs"]
+            directories = ["data/users", "data/learning", "data/analytics"]
             for directory in directories:
                 try:
                     os.makedirs(directory, exist_ok=True)
                     print(f"   ✅ {directory}")
                 except Exception as dir_error:
-                    log_detailed_error(dir_error, f"Directory Creation - {directory}")
+                    log_detailed_error(dir_error, f"Directory Creation - {directory}", {
+                        'directory': directory,
+                        'parent_exists': os.path.exists(os.path.dirname(directory)),
+                        'permissions': oct(os.stat('.').st_mode)[-3:] if os.path.exists('.') else 'N/A'
+                    })
                     raise
             
             # Initialize components with detailed error handling
@@ -289,14 +383,20 @@ class UltraShanDApplication:
                 self.user_data_manager = UserDataManager()
                 print("   ✅ UserDataManager initialized")
             except Exception as e:
-                log_detailed_error(e, "UserDataManager Initialization")
+                log_detailed_error(e, "UserDataManager Initialization", {
+                    'UserDataManager_available': 'UserDataManager' in globals(),
+                    'module_path': UserDataManager.__module__ if 'UserDataManager' in globals() else 'N/A'
+                })
                 raise
             
             try:
                 self.learning_engine = ContinuousLearningEngine()
                 print("   ✅ ContinuousLearningEngine initialized")
             except Exception as e:
-                log_detailed_error(e, "ContinuousLearningEngine Initialization")
+                log_detailed_error(e, "ContinuousLearningEngine Initialization", {
+                    'ContinuousLearningEngine_available': 'ContinuousLearningEngine' in globals(),
+                    'module_path': ContinuousLearningEngine.__module__ if 'ContinuousLearningEngine' in globals() else 'N/A'
+                })
                 raise
             
             try:
@@ -308,7 +408,9 @@ class UltraShanDApplication:
             except Exception as e:
                 log_detailed_error(e, "EnhancedShanD Initialization", {
                     'user_data_manager_type': type(self.user_data_manager).__name__,
-                    'learning_engine_type': type(self.learning_engine).__name__
+                    'learning_engine_type': type(self.learning_engine).__name__,
+                    'user_data_manager_methods': dir(self.user_data_manager),
+                    'learning_engine_methods': dir(self.learning_engine)
                 })
                 raise
             
@@ -316,7 +418,10 @@ class UltraShanDApplication:
                 self.command_processor = AdvancedCommandProcessor(self.shan_d_brain)
                 print("   ✅ AdvancedCommandProcessor initialized")
             except Exception as e:
-                log_detailed_error(e, "AdvancedCommandProcessor Initialization")
+                log_detailed_error(e, "AdvancedCommandProcessor Initialization", {
+                    'shan_d_brain_type': type(self.shan_d_brain).__name__,
+                    'shan_d_brain_methods': dir(self.shan_d_brain)
+                })
                 raise
             
             logger.info("✅ All ultra-enhanced startup checks passed!")
@@ -326,7 +431,13 @@ class UltraShanDApplication:
                 'completed_components': [
                     name for name in ['user_data_manager', 'learning_engine', 'shan_d_brain', 'command_processor']
                     if hasattr(self, name) and getattr(self, name) is not None
-                ]
+                ],
+                'component_status': {
+                    'user_data_manager': hasattr(self, 'user_data_manager'),
+                    'learning_engine': hasattr(self, 'learning_engine'),
+                    'shan_d_brain': hasattr(self, 'shan_d_brain'),
+                    'command_processor': hasattr(self, 'command_processor')
+                }
             })
             raise
 
@@ -345,7 +456,10 @@ class UltraShanDApplication:
                 logger.info(f"📊 Version: {branding['version']}")
                 logger.info(f"🌟 Technology: {branding['trademark']}")
             except Exception as branding_error:
-                log_detailed_error(branding_error, "Branding Information")
+                log_detailed_error(branding_error, "Branding Information", {
+                    'config_methods': [method for method in dir(self.config) if not method.startswith('_')],
+                    'config_type': type(self.config).__name__
+                })
                 logger.warning("⚠️ Could not load branding information, continuing...")
             
             logger.info("💬 Enhanced Capabilities:")
@@ -367,7 +481,8 @@ class UltraShanDApplication:
                 log_detailed_error(bot_error, "ShanDBot Initialization", {
                     'brain_available': self.shan_d_brain is not None,
                     'processor_available': self.command_processor is not None,
-                    'data_manager_available': self.user_data_manager is not None
+                    'data_manager_available': self.user_data_manager is not None,
+                    'ShanDBot_signature': ShanDBot.__init__.__code__.co_varnames if hasattr(ShanDBot, '__init__') else 'N/A'
                 })
                 raise
             
@@ -385,7 +500,10 @@ class UltraShanDApplication:
                 await self.bot.start()
                 logger.info("✅ Shan-D Ultra-Human AI is now live and ready!")
             except Exception as start_error:
-                log_detailed_error(start_error, "Bot Startup")
+                log_detailed_error(start_error, "Bot Startup", {
+                    'bot_type': type(self.bot).__name__,
+                    'bot_methods': dir(self.bot)
+                })
                 raise
             
             logger.info("🌟 Advanced learning and personalization active!")
@@ -493,9 +611,10 @@ async def main():
         log_detailed_error(e, "Main Application", {
             'command_line_args': sys.argv,
             'working_directory': os.getcwd(),
-            'python_executable': sys.executable
+            'python_executable': sys.executable,
+            'script_location': __file__
         })
-        print(f"💥 Fatal error in Ultra-Human AI. Check logs for details.")
+        print(f"💥 Fatal error in Ultra-Human AI. Check error details above.")
         sys.exit(1)
 
 if __name__ == "__main__":
@@ -505,4 +624,4 @@ if __name__ == "__main__":
         print("\n👋 Ultra-Human AI says goodbye!")
     except Exception as e:
         log_detailed_error(e, "Application Entry Point")
-        sys.exit(1)
+        sys.exit(1) 
