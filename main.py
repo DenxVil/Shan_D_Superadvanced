@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 import json
+from fastapi import FastAPI
 import yaml
 
 # Add src directory to Python path for imports
