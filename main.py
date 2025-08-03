@@ -40,7 +40,7 @@ print("""
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 try:
-    from telegram.bot import ShanDBot
+    from src.telegram.bot import ShanDBot
     from configs.config import Config
     from utils.helpers import setup_logging, check_dependencies
     from core.shan_d_enhanced import EnhancedShanD
