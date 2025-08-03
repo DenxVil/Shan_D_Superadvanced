@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from .emotion_engine import AdvancedEmotionEngine
 from .memory_manager import AdvancedMemoryManager
 from .personality import EnhancedPersonalityEngine
-from .conversation_flow import ConversationFlowManager
+from .conversation_flow import ShanDConversationFlow
 from .learning_engine import ContinuousLearningEngine
 from ..models.llm_handler import EnhancedLLMHandler
 from ..models.knowledge_retriever import KnowledgeRetriever
