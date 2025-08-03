@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  shan-d-ai:
+    build: .
+    container_name: shan-d-ultra-human-ai
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - redis
+    networks:
+      - shan-d-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: shan-d-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - shan-d-network
+
+volumes:
+  redis_data:
+
+networks:
+  shan-d-network:
+    driver: bridge
+
+# Created by: ◉Ɗєиνιℓ 🧑‍💻👻
+# Shan-D Ultra-Human AI Assistant
