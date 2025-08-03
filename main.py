@@ -401,7 +401,7 @@ async def main():
 
 def run():
     try:
-        code = asyncio.run(main())
+        
         sys.exit(code)
     except Exception as e:
         logger.error(f"🔥 Critical failure: {e}")
