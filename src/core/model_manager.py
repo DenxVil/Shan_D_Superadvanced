@@ -4,7 +4,7 @@ Created by: ◉Ɗєиνιℓ
 
 """
 
-
+import os
 import asyncio
 import aiohttp
 import json
@@ -14,6 +14,11 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from enum import Enum
 from contextlib import asynccontextmanager
+api_keys = {
+    "openai": os.getenv("OPENAI_API_KEY"),
+    "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+    # add providers here if the code supports them
+}
 
 class ModelType(Enum):
     REASONING = "reasoning"
@@ -36,7 +41,7 @@ class ModelConfig:
 class AdvancedModelManager:
     def __init__(self, config: Dict):
         self.config = config
-        self.models = self.initialize_models()
+        self.models = self.initialize_models(api_keys)
         self.session_pool = None
         self.performance_metrics = {}
 
