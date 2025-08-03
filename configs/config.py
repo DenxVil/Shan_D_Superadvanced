@@ -11,6 +11,9 @@ load_dotenv()
 
 class Config:
     """Enhanced configuration class with advanced settings"""
+    # Add this to your existing config.py
+
+
     
     def __init__(self):
         # Core Bot Settings
@@ -65,3 +68,18 @@ class Config:
         if not self.TELEGRAM_TOKEN:
             return False
         return True
+    # Add this to your existing config.py
+
+WEB_CONFIG = {
+    'host': '0.0.0.0',
+    'port': 8080,
+    'secret_key': 'your-secret-key-change-this-in-production',
+    'cors_origins': ['*'],
+    'max_request_size': 16 * 1024 * 1024,  # 16MB
+    'websocket_heartbeat': 30,
+    'static_files': True
+}
+
+def get_web_config():
+    """Get web application configuration"""
+    return WEB_CONFIG
