@@ -40,7 +40,7 @@ class AdvancedModelManager:
         self.session_pool = None
         self.performance_metrics = {}
         
-    def _initialize_models(self) -> Dict[ModelType, ModelConfig]:
+    def initialize_models(self) -> Dict[ModelType, ModelConfig]:
         """Initialize model configurations from config"""
         return {
             ModelType.REASONING: ModelConfig(
