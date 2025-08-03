@@ -247,7 +247,7 @@ class ShanDApplication:
     async def _init_models(self):
         mgr = self.components.get("model_manager")
         if mgr:
-            await mgr.initialize_models(self.config_manager.config.get("api_keys", {}))
+            await mgr._initialize_models(self.config_manager.config.get("api_keys", {}))
             logger.info("✔ Models initialized")
 
     def _setup_http_routes(self):
