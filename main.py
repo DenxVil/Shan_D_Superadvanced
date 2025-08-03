@@ -14,7 +14,6 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import json
 import yaml
-
 from fastapi import FastAPI, HTTPException
 import uvicorn
 from telegram.ext import ApplicationBuilder, CommandHandler
@@ -23,9 +22,9 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-
 class EnhancedLogger:
     """Enhanced logging system with multiple output streams"""
+
     def __init__(self):
         self.logger = None
         self._setup_logging()
@@ -39,11 +38,15 @@ class EnhancedLogger:
         )
         simple = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-        file_h = logging.FileHandler(log_dir / f"shan_d_{datetime.now():%Y%m%d}.log", encoding="utf-8")
+        file_h = logging.FileHandler(
+            log_dir / f"shan_d_{datetime.now():%Y%m%d}.log", encoding="utf-8"
+        )
         file_h.setLevel(logging.DEBUG)
         file_h.setFormatter(detailed)
 
-        err_h = logging.FileHandler(log_dir / f"errors_{datetime.now():%Y%m%d}.log", encoding="utf-8")
+        err_h = logging.FileHandler(
+            log_dir / f"errors_{datetime.now():%Y%m%d}.log", encoding="utf-8"
+        )
         err_h.setLevel(logging.ERROR)
         err_h.setFormatter(detailed)
 
@@ -57,13 +60,13 @@ class EnhancedLogger:
         self.logger.addHandler(err_h)
         self.logger.addHandler(console)
 
+        # Quiet external libraries
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
 
     def get_logger(self):
         return self.logger
-
 
 # Global logger
 log_manager = EnhancedLogger()
@@ -72,12 +75,14 @@ logger = log_manager.get_logger()
 
 class DirectoryStructureManager:
     """Ensures required directories and files exist"""
+
     REQUIRED_DIRECTORIES = [
         "src", "configs", "api", "logs", "data", "temp",
         "cache", "uploads", "models", "static", "templates",
         "data/conversations", "data/memories", "data/models",
         "cache/embeddings", "cache/responses"
     ]
+
     CRITICAL_FILES = [
         "configs/config.py",
         "configs/settings.yaml",
@@ -101,10 +106,11 @@ class DirectoryStructureManager:
             missing = [f for f in cls.CRITICAL_FILES if not (root / f).exists()]
             if missing:
                 logger.warning(f"⚠️ Missing critical files: {missing}")
+                cls._ensure_runtime_config(root)
 
-            cls._ensure_runtime_config(root)
             logger.info("✅ Directory validation complete")
             return True
+
         except Exception as e:
             logger.error(f"❌ Directory validation failed: {e}")
             logger.error(traceback.format_exc())
@@ -138,6 +144,7 @@ class DirectoryStructureManager:
 
 class ConfigurationManager:
     """Loads and validates configuration"""
+
     def __init__(self):
         self.config: Dict[str, Any] = {}
         self.settings: Dict[str, Any] = {}
@@ -187,7 +194,7 @@ class ConfigurationManager:
         if not self.config.get("api_keys"):
             logger.warning("⚠️ No API keys configured")
         p = self.config.get("port", 8000)
-        if not (1024 <= p <= 65535):
+        if not (1024 <= p < 65535):
             logger.warning(f"⚠️ Invalid port {p}, defaulting to 8000")
             self.config["port"] = 8000
 
@@ -206,6 +213,7 @@ class ConfigurationManager:
 
 class ShanDApplication:
     """Main application orchestrator"""
+
     def __init__(self):
         self.config_manager = ConfigurationManager()
         self.components: Dict[str, Any] = {}
@@ -226,6 +234,7 @@ class ShanDApplication:
 
             logger.info("✅ Initialization complete")
             return True
+
         except Exception as e:
             logger.error(f"❌ Initialization failed: {e}")
             logger.error(traceback.format_exc())
@@ -250,11 +259,14 @@ class ShanDApplication:
                 "conversation_flow": ShanDConversationFlow(),
                 "multimodal_processor": MultimodalProcessor(cfg)
             }
+
             for name, comp in self.components.items():
                 if hasattr(comp, "initialize"):
                     await comp.initialize()
                     logger.debug(f"✅ {name} initialized")
+
             logger.info("✅ Core loaded")
+
         except ImportError as e:
             logger.error(f"❌ Core import failed: {e}")
             self.components = {n: None for n in self.components}
@@ -302,7 +314,9 @@ class ShanDApplication:
             try:
                 flow = self.components.get("conversation_flow")
                 if flow:
-                    return await flow.process_message(msg.get("text", ""), msg.get("user_id", ""), msg.get("context", {}))
+                    return await flow.process_message(
+                        msg.get("text", ""), msg.get("user_id", ""), msg.get("context", {})
+                    )
                 return {"text": "Initializing", "status": "initializing"}
             except Exception as e:
                 logger.error(f"❌ Chat error: {e}")
@@ -311,42 +325,29 @@ class ShanDApplication:
         logger.info("✅ Routes configured")
 
     async def _setup_integrations(self):
-    logger.info("🔗 Setting up integrations...")
-    try:
-        telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
-        if not telegram_token:
-            logger.error("❌ Telegram token not found—skipping bot setup")
-            return
+        logger.info("🔗 Setting up integrations...")
+        try:
+            telegram_token = self.config_manager.config.get("api_keys", {}).get("telegram")
+            if not telegram_token:
+                logger.error("❌ Telegram token not found—skipping bot setup")
+                return
 
-        # Build the Telegram Application
-        bot_app = ApplicationBuilder().token(telegram_token).build()
+            bot_app = ApplicationBuilder().token(telegram_token).build()
 
-        # /start command handler
-        async def _setup_integrations(self):
-    logger.info("🔗 Setting up integrations...")
-    try:
-        telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
-        if not telegram_token:
-            logger.error("❌ Telegram token not found—skipping bot setup")
-            return
+            async def _start(update, context):
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="✅ Shan-D bot is alive!"
+                )
 
-        # Build the Telegram Application
-        bot_app = ApplicationBuilder().token(telegram_token).build()
+            bot_app.add_handler(CommandHandler("start", _start))
+            self.telegram_app = bot_app
+            logger.info("✅ Telegram Application built successfully")
 
-        # /start command handler
-        async def _start(update, context):
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="✅ Shan-D bot is alive!"
-            )
-        bot_app.add_handler(CommandHandler("start", _start))
+        except Exception as e:
+            logger.error(f"❌ Integration setup failed: {e}")
+            logger.error(traceback.format_exc())
 
-        # Store for later and log
-        self.telegram_app = bot_app
-        logger.info("✅ Telegram Application built successfully")
-    except Exception as e:
-        logger.error(f"❌ Integration setup failed: {e}")
-        logger.error(traceback.format_exc())
     def _memory_usage(self) -> Dict[str, Any]:
         try:
             import psutil
@@ -360,17 +361,15 @@ class ShanDApplication:
         except Exception:
             return {"status": "unavailable"}
 
-
 async def main():
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("💡 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 💡")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     app = ShanDApplication()
     if not await app.initialize():
         return 1
 
-    # ——— NEW: launch FastAPI HTTP server ———
     cfg = app.config_manager.config
     host, port = cfg.get("host", "0.0.0.0"), cfg.get("port", 8000)
     server = uvicorn.Server(
@@ -379,14 +378,12 @@ async def main():
     asyncio.create_task(server.serve())
     logger.info(f"🚀 FastAPI serving on http://{host}:{port}")
 
-    # ——— NEW: start Telegram polling ———
     if app.telegram_app:
         asyncio.create_task(app.telegram_app.run_polling())
         logger.info("🚀 Telegram bot polling started")
     else:
         logger.error("⚠️ Telegram app not initialized; skipping polling")
 
-    # Keep alive
     try:
         while True:
             await asyncio.sleep(3600)
@@ -409,7 +406,6 @@ def run():
     except Exception as e:
         logger.error(f"🔥 Critical failure: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     run()
