@@ -42,4 +42,11 @@ safety
 
 #webhook
 fastapi
-httpx
+https
+# Add these for web application:
+aiohttp>=3.8.0
+aiohttp-cors>=0.7.0
+aiohttp-session>=2.12.0
+uvloop>=0.17.0  # For better async performance
+gunicorn>=21.2.0  # For production deployment
+
