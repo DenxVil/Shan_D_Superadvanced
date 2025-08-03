@@ -193,7 +193,7 @@ class ShanDConversationFlow:
             'word_count': len(message.split()),
             'question_count': message.count('?'),
             'exclamation_count': message.count('!'),
-            'has_code': '```
+            'has_code': '',
             'has_personal_info': any(word in message.lower() for word in ['i am', 'my', 'me', 'personally']),
             'has_problem': any(word in message.lower() for word in ['problem', 'issue', 'help', 'stuck', 'error']),
             'has_creative_request': any(word in message.lower() for word in ['create', 'design', 'brainstorm', 'idea']),
