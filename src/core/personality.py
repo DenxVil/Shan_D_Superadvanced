@@ -38,7 +38,7 @@ class PersonalityProfile:
     interaction_count: int
     user_preferences: Dict[str, Any]
     
-class ShanDPersonality:
+class EnhancedPersonalityEngine:
     def __init__(self):
         self.base_personality = {
             PersonalityTrait.FRIENDLY: 0.9,
