@@ -240,7 +240,7 @@ class ShanDApplication:
             "emotion_engine": AdvancedEmotionEngine(),
             "memory_manager": AdvancedMemoryManager(),
             "learning_engine": ContinuousLearningEngine(),
-            "model_manager": AdvancedModelManager(_load_api_keys()),
+            "model_manager": AdvancedModelManager(api_keys),
             "conversation_flow": ShanDConversationFlow(),
             "multimodal_processor": MultimodalProcessor({"debug": True})
         }
