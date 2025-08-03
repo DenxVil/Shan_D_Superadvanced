@@ -22,6 +22,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
+
 class EnhancedLogger:
     """Enhanced logging system with multiple output streams"""
 
@@ -60,13 +61,14 @@ class EnhancedLogger:
         self.logger.addHandler(err_h)
         self.logger.addHandler(console)
 
-        # Quiet external libraries
+        # Quiet external libs
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
 
     def get_logger(self):
         return self.logger
+
 
 # Global logger
 log_manager = EnhancedLogger()
@@ -361,6 +363,7 @@ class ShanDApplication:
         except Exception:
             return {"status": "unavailable"}
 
+
 async def main():
     print("\n" + "=" * 80)
     print("💡 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 💡")
@@ -372,6 +375,7 @@ async def main():
 
     cfg = app.config_manager.config
     host, port = cfg.get("host", "0.0.0.0"), cfg.get("port", 8000)
+
     server = uvicorn.Server(
         config=uvicorn.Config(app.app, host=host, port=port, loop="asyncio")
     )
@@ -399,13 +403,15 @@ async def main():
     finally:
         logger.info("📝 Application shutdown completed")
 
+
 def run():
     try:
-        
+        code = asyncio.run(main())
         sys.exit(code)
     except Exception as e:
         logger.error(f"🔥 Critical failure: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     run()
