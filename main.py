@@ -367,13 +367,14 @@ async def main():
 
     # Keep process alive for both HTTP and Telegram
     # launch bot polling without blocking
-    asyncio.create_task(app.telegram_app.run_polling())
+    )
     try:
         while True:
             await asyncio.sleep(3600)
     except KeyboardInterrupt:
         logger.info("🛑 Stopping application")
         if app.telegram_app:
+            asyncio.create_task(app.telegram_app.run_polling()
             await app.telegram_app.stop()
         return 0
     except Exception as e:
