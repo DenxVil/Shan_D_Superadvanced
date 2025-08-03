@@ -28,7 +28,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 class EnhancedLogger:
     """Enhanced logging system with multiple output streams"""
-
     def __init__(self):
         self.logger = None
         self._setup_logging()
@@ -80,14 +79,12 @@ logger = log_manager.get_logger()
 
 class DirectoryStructureManager:
     """Ensures required directories and files exist"""
-
     REQUIRED_DIRECTORIES = [
         "src", "configs", "api", "logs", "data", "temp",
         "cache", "uploads", "models", "static", "templates",
         "data/conversations", "data/memories", "data/models",
         "cache/embeddings", "cache/responses"
     ]
-
     CRITICAL_FILES = [
         "configs/config.py",
         "configs/settings.yaml",
@@ -115,7 +112,6 @@ class DirectoryStructureManager:
 
             logger.info("✅ Directory validation complete")
             return True
-
         except Exception as e:
             logger.error(f"❌ Directory validation failed: {e}")
             logger.error(traceback.format_exc())
@@ -149,7 +145,6 @@ class DirectoryStructureManager:
 
 class ConfigurationManager:
     """Loads and validates configuration"""
-
     def __init__(self):
         self.config: Dict[str, Any] = {}
         self.settings: Dict[str, Any] = {}
@@ -218,7 +213,6 @@ class ConfigurationManager:
 
 class ShanDApplication:
     """Main application orchestrator"""
-
     def __init__(self):
         self.config_manager = ConfigurationManager()
         self.components: Dict[str, Any] = {}
@@ -366,7 +360,7 @@ class ShanDApplication:
 
 
 async def _serve():
-    # Initialize and start services
+    # Initialize application
     app = ShanDApplication()
     if not await app.initialize():
         sys.exit(1)
@@ -374,11 +368,13 @@ async def _serve():
     cfg = app.config_manager.config
     host, port = cfg["host"], cfg["port"]
 
+    # Start HTTP server
     server = uvicorn.Server(
         config=uvicorn.Config(app.app, host=host, port=port, loop="asyncio")
     )
     http_task = asyncio.create_task(server.serve())
 
+    # Start Telegram polling
     polling_task = None
     if app.telegram_app:
         polling_task = asyncio.create_task(app.telegram_app.run_polling())
