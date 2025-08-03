@@ -315,9 +315,9 @@ class ShanDApplication:
             self.components['emotion_engine'] = AdvancedEmotionEngine()
             self.components['memory_manager'] = AdvancedMemoryManager()
             self.components['learning_engine'] = ContinuousLearningEngine()
-            self.components['model_manager'] = AdvancedModelManager()
+            self.components['model_manager'] = AdvancedModelManager(self.config)
             self.components['conversation_flow'] = ShanDConversationFlow()
-            self.components['multimodal_processor'] = MultimodalProcessor()
+            self.components['multimodal_processor'] = MultimodalProcessor(self.config)
             
             # Initialize each component
             for name, component in self.components.items():
