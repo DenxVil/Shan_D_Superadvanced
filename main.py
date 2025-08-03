@@ -14,8 +14,6 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import json
 import yaml
-import argparse
-from aiohttp import web
 
 # Add src directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -70,11 +68,6 @@ class EnhancedLogger:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
-        try:
-            from src.web_app import create_web_app
-            WEB_APP_AVAILABLE = True
-        except ImportError: 
-            WEB_APP_AVAILABLE = False
     
     def get_logger(self):
         return self.logger
@@ -105,7 +98,7 @@ class DirectoryStructureManager:
     @classmethod
     def validate_and_setup(cls) -> bool:
         """Validate existing structure and create missing components"""
-        logger.info("🔍 Validating application structure...")
+        logger.info("ð Validating application structure...")
         
         try:
             app_root = Path.cwd()
@@ -115,7 +108,7 @@ class DirectoryStructureManager:
             for dir_path in cls.REQUIRED_DIRECTORIES:
                 full_path = app_root / dir_path
                 full_path.mkdir(parents=True, exist_ok=True)
-                logger.debug(f"✅ Directory ensured: {dir_path}")
+                logger.debug(f"â Directory ensured: {dir_path}")
             
             # Validate critical files exist
             missing_files = []
@@ -125,17 +118,17 @@ class DirectoryStructureManager:
                     missing_files.append(file_path)
             
             if missing_files:
-                logger.warning(f"⚠️ Missing critical files: {missing_files}")
+                logger.warning(f"â ï¸ Missing critical files: {missing_files}")
                 # Continue anyway as some files might be optional
             
             # Create runtime configuration if needed
             cls._ensure_runtime_config(app_root)
             
-            logger.info("✅ Directory structure validation completed")
+            logger.info("â Directory structure validation completed")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Directory validation failed: {str(e)}")
+            logger.error(f"â Directory validation failed: {str(e)}")
             logger.error(traceback.format_exc())
             return False
     
@@ -167,7 +160,7 @@ class DirectoryStructureManager:
             with open(runtime_config, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, indent=2)
             
-            logger.info(f"✅ Created runtime configuration: {runtime_config}")
+            logger.info(f"â Created runtime configuration: {runtime_config}")
 
 class ConfigurationManager:
     """Manages application configuration loading and validation"""
@@ -179,7 +172,7 @@ class ConfigurationManager:
     def load_configurations(self) -> bool:
         """Load all configuration files"""
         try:
-            logger.info("📝 Loading application configurations...")
+            logger.info("ð Loading application configurations...")
             
             # Load YAML settings
             self._load_yaml_settings()
@@ -193,11 +186,11 @@ class ConfigurationManager:
             # Validate configuration
             self._validate_config()
             
-            logger.info("✅ Configuration loading completed")
+            logger.info("â Configuration loading completed")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Configuration loading failed: {str(e)}")
+            logger.error(f"â Configuration loading failed: {str(e)}")
             return False
     
     def _load_yaml_settings(self):
@@ -206,9 +199,9 @@ class ConfigurationManager:
         if settings_file.exists():
             with open(settings_file, 'r', encoding='utf-8') as f:
                 self.settings = yaml.safe_load(f) or {}
-            logger.debug("✅ YAML settings loaded")
+            logger.debug("â YAML settings loaded")
         else:
-            logger.warning("⚠️ settings.yaml not found, using defaults")
+            logger.warning("â ï¸ settings.yaml not found, using defaults")
             self.settings = self._get_default_settings()
     
     def _load_env_config(self):
@@ -232,17 +225,17 @@ class ConfigurationManager:
         # Filter out None values
         self.config['api_keys'] = {k: v for k, v in api_keys.items() if v}
         
-        logger.info(f"🔑 Loaded {len(self.config['api_keys'])} API keys")
+        logger.info(f"ð Loaded {len(self.config['api_keys'])} API keys")
     
     def _validate_config(self):
         """Validate critical configuration values"""
         if not self.config.get('api_keys'):
-            logger.warning("⚠️ No API keys configured - some features may not work")
+            logger.warning("â ï¸ No API keys configured - some features may not work")
         
         # Validate port range
         port = self.config.get('port', 8000)
         if not (1024 <= port <= 65535):
-            logger.warning(f"⚠️ Invalid port {port}, using default 8000")
+            logger.warning(f"â ï¸ Invalid port {port}, using default 8000")
             self.config['port'] = 8000
     
     def _get_default_settings(self) -> Dict[str, Any]:
@@ -270,22 +263,15 @@ class ShanDApplication:
     """Main application class integrating all components"""
     
     def __init__(self):
-        self.config = config or {}
-        self.logger = logging.getLogger("ShanD")
-        self.web_app = None
         self.config_manager = ConfigurationManager()
         self.components = {}
         self.is_initialized = False
-        self.app = Nonet
+        self.app = None
         
     async def initialize(self) -> bool:
         """Initialize the complete application"""
-        self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
-             return True
-            
-        except Exception as e:
-            self.logger.error(f"❌ Initialization failed: {str(e)}")
-            raise
+        try:
+            logger.info("ð Initializing Shan_D_Superadvanced...")
             
             # Load configurations
             if not self.config_manager.load_configurations():
@@ -304,41 +290,17 @@ class ShanDApplication:
             await self._setup_integrations()
             
             self.is_initialized = True
-            self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
-            return True
-            
-        self.logger.info("✅ Shan_D_Superadvanced initialization completed successfully")
+            logger.info("â Shan_D_Superadvanced initialization completed successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Initialization failed: {str(e)}")
-            raise
-    
-    
-    async def initialize_web_app(self):
-        """NEW METHOD: Initialize web application"""
-        if not WEB_APP_AVAILABLE:
-            raise RuntimeError("❌ Web application module not available")
-        
-        try:
-            self.web_app = await create_web_app(self)
-            self.logger.info("✅ Web application initialized successfully")
-            return self.web_app
-        except Exception as e:
-            self.logger.error(f"❌ Web application initialization failed: {str(e)}")
-            raise
-    
-    async def run_web_server(self, host="0.0.0.0", port=8080):
-        """NEW METHOD: Run web server"""
-        if not self.web_app:
-            await self.initialize_web_app()
-        
-        self.logger.info(f"🌐 Starting web server on {host}:{port}")
-        web.run_app(self.web_app, host=host, port=port)
+            logger.error(f"â Application initialization failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False
     
     async def _initialize_core_components(self):
         """Initialize core AI components"""
-        logger.info("🧠 Initializing core AI components...")
+        logger.info("ð§  Initializing core AI components...")
         
         try:
             # Import and initialize core modules
@@ -353,35 +315,32 @@ class ShanDApplication:
             self.components['emotion_engine'] = AdvancedEmotionEngine()
             self.components['memory_manager'] = AdvancedMemoryManager()
             self.components['learning_engine'] = ContinuousLearningEngine()
-            # Replace line  main.py
-            config = {'debug': True}  # Minimal config
-            self.components['model_manager'] = AdvancedModelManager(config)
-            
+            self.components['model_manager'] = AdvancedModelManager()
             self.components['conversation_flow'] = ShanDConversationFlow()
-            self.components['multimodal_processor'] = MultimodalProcessor(config)
+            self.components['multimodal_processor'] = MultimodalProcessor()
             
             # Initialize each component
             for name, component in self.components.items():
                 if hasattr(component, 'initialize'):
                     await component.initialize()
-                logger.debug(f"✅ {name} initialized")
+                logger.debug(f"â {name} initialized")
             
-            logger.info("✅ Core components initialized successfully")
+            logger.info("â Core components initialized successfully")
             
         except ImportError as e:
-            logger.error(f"❌ Failed to import core modules: {str(e)}")
+            logger.error(f"â Failed to import core modules: {str(e)}")
             # Create mock components for graceful degradation
             self.components = {name: None for name in [
                 'emotion_engine', 'memory_manager', 'learning_engine',
                 'model_manager', 'conversation_flow', 'multimodal_processor'
             ]}
         except Exception as e:
-            logger.error(f"❌ Core component initialization failed: {str(e)}")
+            logger.error(f"â Core component initialization failed: {str(e)}")
             raise
     
     async def _setup_web_interface(self):
         """Setup FastAPI web interface"""
-        logger.info("🌐 Setting up web interface...")
+        logger.info("ð Setting up web interface...")
         
         try:
             from fastapi import FastAPI, HTTPException, Depends
@@ -415,13 +374,13 @@ class ShanDApplication:
             # Setup routes
             await self._setup_routes()
             
-            logger.info("✅ Web interface setup completed")
+            logger.info("â Web interface setup completed")
             
         except ImportError:
-            logger.warning("⚠️ FastAPI not available, web interface disabled")
+            logger.warning("â ï¸ FastAPI not available, web interface disabled")
             self.app = None
         except Exception as e:
-            logger.error(f"❌ Web interface setup failed: {str(e)}")
+            logger.error(f"â Web interface setup failed: {str(e)}")
             self.app = None
     
     async def _setup_routes(self):
@@ -474,11 +433,11 @@ class ShanDApplication:
                 logger.error(f"Chat endpoint error: {str(e)}")
                 raise HTTPException(status_code=500, detail="Internal server error")
         
-        logger.info("✅ API routes configured")
+        logger.info("â API routes configured")
     
     async def _initialize_ai_models(self):
         """Initialize AI models and validate API connections"""
-        logger.info("🤖 Initializing AI models...")
+        logger.info("ð¤ Initializing AI models...")
         
         try:
             model_manager = self.components.get('model_manager')
@@ -486,28 +445,28 @@ class ShanDApplication:
                 await model_manager.initialize_models(
                     self.config_manager.config.get('api_keys', {})
                 )
-                logger.info("✅ AI models initialized")
+                logger.info("â AI models initialized")
             else:
-                logger.warning("⚠️ Model manager not available")
+                logger.warning("â ï¸ Model manager not available")
                 
         except Exception as e:
-            logger.error(f"❌ AI model initialization failed: {str(e)}")
+            logger.error(f"â AI model initialization failed: {str(e)}")
     
     async def _setup_integrations(self):
         """Setup external integrations (Telegram, etc.)"""
-        logger.info("🔗 Setting up integrations...")
+        logger.info("ð Setting up integrations...")
         
         try:
             # Setup Telegram bot if token is available
             telegram_token = self.config_manager.config.get('api_keys', {}).get('telegram')
             if telegram_token:
                 # Import and setup telegram integration
-                logger.info("✅ Telegram integration available")
+                logger.info("â Telegram integration available")
             else:
-                logger.info("ℹ️ Telegram integration not configured")
+                logger.info("â¹ï¸ Telegram integration not configured")
                 
         except Exception as e:
-            logger.error(f"❌ Integration setup failed: {str(e)}")
+            logger.error(f"â Integration setup failed: {str(e)}")
     
     def _get_memory_usage(self) -> Dict[str, Any]:
         """Get current memory usage statistics"""
@@ -529,7 +488,7 @@ class ShanDApplication:
     async def start_server(self):
         """Start the web server"""
         if not self.app:
-            logger.error("❌ No web application available to start")
+            logger.error("â No web application available to start")
             return False
         
         try:
@@ -539,9 +498,9 @@ class ShanDApplication:
             host = config.get('host', '0.0.0.0')
             port = config.get('port', 8000)
             
-            logger.info(f"🌟 Starting Shan_D_Superadvanced server...")
-            logger.info(f"🌐 Server available at http://{host}:{port}")
-            logger.info(f"📚 API documentation at http://{host}:{port}/docs")
+            logger.info(f"ð Starting Shan_D_Superadvanced server...")
+            logger.info(f"ð Server available at http://{host}:{port}")
+            logger.info(f"ð API documentation at http://{host}:{port}/docs")
             
             uvicorn_config = uvicorn.Config(
                 self.app,
@@ -555,73 +514,49 @@ class ShanDApplication:
             await server.serve()
             
         except ImportError:
-            logger.error("❌ uvicorn not available, cannot start web server")
+            logger.error("â uvicorn not available, cannot start web server")
             return False
         except Exception as e:
-            logger.error(f"❌ Failed to start server: {str(e)}")
+            logger.error(f"â Failed to start server: {str(e)}")
             return False
 
 async def main():
     """Main application entry point"""
     print("\n" + "="*80)
-    print("🌟 SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT 🌟")
+    print("ð SHAN_D_SUPERADVANCED - ADVANCED AI ASSISTANT ð")
     print("="*80)
-    print("🧠 Features: Emotion Engine | Learning System | Memory Management")
-    print("🤖 Models: Multi-AI Support | Multimodal Processing")
-    print("🌐 Interface: REST API | Telegram Bot | Web UI")
+    print("ð§  Features: Emotion Engine | Learning System | Memory Management")
+    print("ð¤ Models: Multi-AI Support | Multimodal Processing")
+    print("ð Interface: REST API | Telegram Bot | Web UI")
     print("="*80 + "\n")
     
     try:
-        args = parse_args()
         # Step 1: Validate directory structure
-        logger.info("🔍 Starting application validation...")
+        logger.info("ð Starting application validation...")
         if not DirectoryStructureManager.validate_and_setup():
-            logger.error("❌ Directory structure validation failed")
+            logger.error("â Directory structure validation failed")
             return 1
         
         # Step 2: Initialize application
         app = ShanDApplication()
         if not await app.initialize():
-            logger.error("❌ Application initialization failed")
+            logger.error("â Application initialization failed")
             return 1
         
         # Step 3: Start server
         await app.start_server()
-        shan_d = ShanDAdvanced()  # Use your existing initialization
-        await shan_d.initialize()
         
-        # Run based on mode
-        if args.mode == "web":
-            if not WEB_APP_AVAILABLE:
-                print("❌ Web application not available. Install aiohttp: pip install aiohttp")
-                return
-            await shan_d.run_web_server(host=args.host, port=args.port)
-            
-        elif args.mode == "hybrid":
-            if not WEB_APP_AVAILABLE:
-                print("❌ Web application not available. Running bot only...")
-                # Your existing bot start code
-                return
-            
-            # Start web app in background
-            await shan_d.initialize_web_app()
-            
-            # Start both (this is simplified - you might need to adjust based on your bot implementation)
-            import asyncio
-            bot_task = asyncio.create_task(shan_d.start_bot())  # Your existing bot start method
-            web_task = asyncio.create_task(shan_d.run_web_server(args.host, args.port))
-            await asyncio.gather(bot_task, web_task)
         return 0
         
     except KeyboardInterrupt:
-        logger.info("👋 Application stopped by user")
+        logger.info("ð Application stopped by user")
         return 0
     except Exception as e:
-        logger.error(f"❌ Unexpected error: {str(e)}")
+        logger.error(f"â Unexpected error: {str(e)}")
         logger.error(traceback.format_exc())
         return 1
     finally:
-        logger.info("🏁 Application shutdown completed")
+        logger.info("ð Application shutdown completed")
 
 def run():
     """Synchronous entry point"""
@@ -629,13 +564,8 @@ def run():
         exit_code = asyncio.run(main())
         sys.exit(exit_code)
     except Exception as e:
-        logger.error(f"❌ Critical failure: {str(e)}")
+        logger.error(f"â Critical failure: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("🛑 Application stopped by user")
-    except Exception as e:
-        print(f"❌ Failed to start: {str(e)}")
+    run()
