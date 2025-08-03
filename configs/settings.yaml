@@ -1,0 +1,54 @@
+# Shan-D Advanced AI Configuration
+
+# Performance Settings
+performance:
+  max_concurrent_requests: 50
+  request_timeout: 60
+  connection_pool_size: 100
+  max_retries: 3
+
+# AI Model Settings
+ai_models:
+  default_max_tokens: 4096
+  default_temperature: 0.7
+  enable_reasoning_engine: true
+  enable_multimodal: true
+  
+  # Model-specific settings
+  reasoning_model:
+    max_tokens: 8192
+    temperature: 0.1
+    
+  conversation_model:
+    max_tokens: 4096
+    temperature: 0.7
+    
+  fast_response_model:
+    max_tokens: 1024
+    temperature: 0.8
+
+# Error Handling
+error_handling:
+  enable_auto_fix: true
+  log_retention_days: 30
+  max_error_log_size: 1000
+  
+# Logging
+logging:
+  level: INFO
+  file: logs/shan_d.log
+  max_file_size: 10MB
+  backup_count: 5
+
+# Features
+features:
+  multimodal_processing: true
+  advanced_reasoning: true
+  conversation_memory: true
+  auto_learning: true
+  
+# Limits
+limits:
+  max_message_length: 4000
+  max_conversation_history: 20
+  max_file_size: 50MB
