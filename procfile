@@ -1,0 +1,6 @@
+web: python main.py
+worker: python main.py
+
+# Shan-D Ultra-Human AI Assistant 👻
+# Created by: ◉Ɗєиνιℓ 🧑‍💻
+# Heroku deployment configuration
