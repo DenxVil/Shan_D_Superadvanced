@@ -36,7 +36,7 @@ class ModelConfig:
 class AdvancedModelManager:
     def __init__(self, config: Dict):
         self.config = config
-        self.models = self._initialize_models()
+        self.models = self.initialize_models()
         self.session_pool = None
         self.performance_metrics = {}
         
