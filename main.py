@@ -326,8 +326,9 @@ class ShanDApplication:
 
             bot_app.add_handler(CommandHandler("start", start_cmd))
 
-            await bot_app.initialize()
-            await bot_app.start()
+            # start bot polling alongside HTTP
+            asyncio.create_task(app.telegram_app.run_polling())
+            
             self.telegram_app = bot_app
             logger.info("🚀 Telegram bot launched")
         except Exception as e:
@@ -365,6 +366,8 @@ async def main():
     logger.info(f"🚀 FastAPI serving on http://{host}:{port}")
 
     # Keep process alive for both HTTP and Telegram
+    # launch bot polling without blocking
+    asyncio.create_task(app.telegram_app.run_polling())
     try:
         while True:
             await asyncio.sleep(3600)
