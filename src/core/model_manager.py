@@ -102,7 +102,7 @@ class AdvancedModelManager:
             connector=connector,
             timeout=timeout
         )
-    
+        await self.session_pool.close()
     async def select_optimal_model(self, query: str, context: Dict, requirements: Dict) -> ModelConfig:
         """Intelligently select the best model based on query characteristics"""
         
