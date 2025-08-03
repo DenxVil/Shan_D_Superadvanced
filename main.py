@@ -340,49 +340,7 @@ class ShanDApplication:
             logger.error(f"â Core component initialization failed: {str(e)}")
             raise
     
-    async def _setup_web_interface(self):
-        """Setup FastAPI web interface"""
-        logger.info("ð Setting up web interface...")
-        
-        try:
-            from fastapi import FastAPI, HTTPException, Depends
-            from fastapi.middleware.cors import CORSMiddleware
-            from fastapi.responses import JSONResponse
-            from fastapi.staticfiles import StaticFiles
-            import uvicorn
-            
-            # Create FastAPI app
-            self.app = FastAPI(
-                title="Shan_D_Superadvanced",
-                version="2.0.0",
-                description="Advanced AI Assistant with Emotional Intelligence",
-                docs_url="/docs",
-                redoc_url="/redoc"
-            )
-            
-            # Add CORS middleware
-            self.app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-            
-            # Setup static files
-            if Path("static").exists():
-                self.app.mount("/static", StaticFiles(directory="static"), name="static")
-            
-            # Setup routes
-            await self._setup_routes()
-            
-            logger.info("â Web interface setup completed")
-            
-        except ImportError:
-            logger.warning("â ï¸ FastAPI not available, web interface disabled")
-            self.app = None
-        except Exception as e:
-            logger.error(f"â Web interface setup failed: {str(e)}")
+    
             self.app = None
     
     async def _setup_routes(self):
@@ -570,4 +528,7 @@ def run():
         sys.exit(1)
 
 if __name__ == "__main__":
+    
+    
+    
     run()
