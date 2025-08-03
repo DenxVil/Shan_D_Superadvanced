@@ -101,6 +101,62 @@ class ShanDConversationFlow:
             ]
         }
 
+    def _init_state_transitions(self) -> Dict[ConversationState, List[ConversationState]]:
+    """Initialize valid state transitions"""
+    return {
+        ConversationState.GREETING: [
+            ConversationState.ACTIVE,
+            ConversationState.QUESTION_ANSWERING,
+            ConversationState.EMOTIONAL_SUPPORT
+        ],
+        # ... other states ...
+        ConversationState.IDLE: [
+            ConversationState.GREETING,
+            ConversationState.ACTIVE
+        ]  # ← ADD THIS CLOSING BRACKET
+    }  # ← ADD THIS CLOSING BRACE
+
+def _init_engagement_indicators(self) -> Dict[str, Dict[str, float]]:
+    """Initialize engagement level indicators"""
+    return {
+        'high_engagement': {
+            'multiple_questions': 0.8,
+            'detailed_responses': 0.7,
+            'follow_up_questions': 0.9,
+            'personal_sharing': 0.8,
+            'enthusiasm_markers': 0.6
+        },
+        'medium_engagement': {
+            'single_questions': 0.5,
+            'brief_responses': 0.4,
+            'acknowledgments': 0.3,
+            'topic_continuation': 0.5
+        },
+        'low_engagement': {
+            'short_answers': 0.2,
+            'topic_changes': 0.1,
+            'delayed_responses': 0.1,
+            'generic_responses': 0.2
+        }  # ← ADD THIS CLOSING BRACE
+    }  # ← ADD THIS CLOSING BRACE
+
+def _analyze_message(self, message: str) -> Dict[str, Any]:
+    """Analyze message characteristics for flow processing"""
+    analysis = {
+        'length': len(message),
+        'word_count': len(message.split()),
+        'question_count': message.count('?'),
+        'exclamation_count': message.count('!'),
+        'has_code': '```
+        'has_personal_info': any(word in message.lower() for word in ['i am', 'my', 'me', 'personally']),
+        'has_problem': any(word in message.lower() for word in ['problem', 'issue', 'help', 'stuck', 'error']),
+        'has_creative_request': any(word in message.lower() for word in ['create', 'design', 'brainstorm', 'idea']),
+        'has_learning_intent': any(word in message.lower() for word in ['learn', 'teach', 'explain', 'understand', 'how']),
+        'has_emotional_content': any(word in message.lower() for word in ['feel', 'sad', 'happy', 'worried', 'excited']),
+        'complexity_score': self._calculate_complexity(message)
+    }
+    return analysis
+
     def _init_engagement_indicators(self) -> Dict[str, Dict[str, float]]:
         """Initialize engagement level indicators"""
         return {
