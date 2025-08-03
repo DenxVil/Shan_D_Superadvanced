@@ -63,7 +63,7 @@ class EnhancedLogger:
         self.logger.addHandler(err_h)
         self.logger.addHandler(console)
 
-        # Quiet external libraries
+        # Quiet external libs
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("anthropic").setLevel(logging.WARNING)
@@ -72,7 +72,6 @@ class EnhancedLogger:
         return self.logger
 
 
-# Global logger
 log_manager = EnhancedLogger()
 logger = log_manager.get_logger()
 
@@ -374,10 +373,13 @@ async def _serve():
     )
     http_task = asyncio.create_task(server.serve())
 
-    # Start Telegram polling
+    # Start Telegram polling without closing the loop
     polling_task = None
     if app.telegram_app:
-        polling_task = asyncio.create_task(app.telegram_app.run_polling())
+        polling_task = asyncio.create_task(
+            app.telegram_app.run_polling(close_loop=False)
+        )
+        logger.info("🚀 Telegram bot polling started")
 
     # Graceful shutdown on SIGINT/SIGTERM
     stop_signal = asyncio.Future()
@@ -388,10 +390,13 @@ async def _serve():
     await stop_signal
     logger.info("🛑 Shutdown signal received")
 
-    # Shutdown Telegram bot
+    # Shutdown Telegram
     if polling_task:
-        await app.telegram_app.shutdown()
         polling_task.cancel()
+        try:
+            await app.telegram_app.shutdown()
+        except Exception:
+            pass
 
     # Shutdown HTTP server
     await server.shutdown()
