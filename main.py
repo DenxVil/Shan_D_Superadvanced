@@ -48,33 +48,9 @@ def log_detailed_error(error, context="General", additional_info=None):
     print(f"💥 Message: {str(error)}")
     print(f"📍 Location: {traceback.format_exc().splitlines()[-2].strip() if traceback.format_exc().splitlines() else 'Unknown'}")
 
-def check_import_dependencies():
-    """Simple dependency checking"""
-    print("🔍 Checking imports...")
-    
-    required_modules = [
-        ('src.telegram.bot', 'ShanDBot'),
-        ('core.shan_d_enhanced', 'EnhancedShanD'),
-        ('core.conversation_flow', 'ShanDConversationFlow'),
-    ]
-    
-    for module_name, class_name in required_modules:
-        try:
-            __import__(module_name, fromlist=[class_name])
-            print(f"   ✅ {module_name}.{class_name}")
-        except ImportError as e:
-            print(f"   ❌ {module_name}: {e}")
-            return False
-    return True
 
 # Simplified startup with basic error handling
-try:
-    if not check_import_dependencies():
-        sys.exit(1)
-    
-    from src.telegram.bot import ShanDBot
-    from core.shan_d_enhanced import EnhancedShanD
-    # ... other imports
+
     
 except ImportError as e:
     log_detailed_error(e, "Import")
