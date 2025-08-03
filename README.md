@@ -11,7 +11,7 @@
 </p>
 
 <h1 align="center">
-  <img src="https://your-logo-url-here.com/shan-d-logo.png" alt="Shan-D Logo" width="200" height="200">
+  <img src="https://files.catbox.moe/4zddl3.jpg" alt="Shan-D Logo" width="200" j,  height="200">
   <br>
   Shan-D Superadvanced AI
 </h1>
@@ -21,16 +21,7 @@
   🚀 Intelligent, Multimodal, Self-Healing AI Bot for Conversations, Analysis, and More!
 </p>
 
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#demo">Demo</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#security">Security</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#license">License</a>
-</p>
+
 
 
 > **Created by: ◉Ɗєиνιℓ (👻) - Advanced AI Technology**
