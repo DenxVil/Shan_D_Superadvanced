@@ -131,7 +131,12 @@ async def main():
     except KeyboardInterrupt:
         pass
     finally:
-        await app.shutdown()
+        async def shutdown(self):
+    if self.telegram_app:
+        logger.info("👋 Stopping Telegram bot…")
+        # Await the shutdown coroutine
+        await self.telegram_app.shutdown()
+        # No wait_closed() in v20+
     return 0
 
 if __name__ == "__main__":
