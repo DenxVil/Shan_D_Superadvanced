@@ -1,185 +1,172 @@
 #!/usr/bin/env python3
+
 """
-Shan_D_Superadvanced – Main entry point fully integrated
-Long-polling Telegram bot with all features
+Shan-D: Ultra-Enhanced Human-like AI Assistant with Advanced Learning
+Created by: ◉Ɗєиνιℓ
+Version: 4.0.0 Ultra-Human Enhanced
+Features: User Analysis, Self-Improvement, Adaptive Personalization
 """
 
-import os
-import sys
 import asyncio
 import logging
-import signal
+import sys
+import os
 from pathlib import Path
 from datetime import datetime
-from typing import Any, Dict
+import signal
 
-from fastapi import FastAPI
-import uvicorn
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    filters,
-)
-from dotenv import load_dotenv
+print("🌟 Shan-D Ultra-Human AI Starting… 🌟")
 
-# 1) Load environment
-load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-if not TELEGRAM_TOKEN:
-    raise RuntimeError("Missing TELEGRAM_BOT_TOKEN in .env")
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-# 2) Configure logging
-LOG_DIR = Path("logs")
-LOG_DIR.mkdir(exist_ok=True)
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG,
-)
-logger = logging.getLogger("ShanD")
-logging.getLogger("telegram").setLevel(logging.DEBUG)
+try:
+    from src.telegram.bot import ShanDBot
+    from configs.config import Config
+    from utils.helpers import setup_logging, check_dependencies
+    from core.shan_d_enhanced import EnhancedShanD
+    from core.command_processor import AdvancedCommandProcessor
+    from storage.user_data_manager import UserDataManager
+    from core.learning_engine import ContinuousLearningEngine
+except ImportError as e:
+    print(f"❌ Import error: {e}")
+    os.system("pip install -r requirements.txt")
+    sys.exit(1)
 
-# 3) Globals for metrics & memory
-START_TIME = datetime.now()
-ERROR_COUNT = 0
-USER_MEMORY: Dict[int, Dict[str, Any]] = {}
+logger = setup_logging()
 
-# 4) FastAPI for health & metrics
-app = FastAPI()
+class UltraShanDApplication:
+    def __init__(self):
+        self.config = Config()
+        self.bot = None
+        self.shan_d_brain = None
+        self.command_processor = None
+        self.user_data_manager = None
+        self.learning_engine = None
+        self.running = False
 
-@app.get("/healthz")
-async def health():
-    return {"status": "ok"}
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
 
-@app.get("/metrics")
-async def metrics():
-    uptime = (datetime.now() - START_TIME).total_seconds()
-    return {
-        "uptime_seconds": uptime,
-        "errors": ERROR_COUNT,
-        "known_users": len(USER_MEMORY),
-    }
+    def _signal_handler(self, signum, frame):
+        logger.info("🛑 Shutdown signal received")
+        self.running = False
 
-# 5) Self-healing stub
-async def self_heal(exc: Exception, context: Dict[str, Any]):
-    global ERROR_COUNT
-    ERROR_COUNT += 1
-    logger.error("Self-healing activated: %s\nContext: %s", exc, context, exc_info=True)
-    # TODO: Integrate AI-driven repair logic here
+    async def startup_checks(self):
+        try:
+            logger.info("🔍 Running startup checks")
+            if not check_dependencies():
+                raise RuntimeError("Missing dependencies")
+            if not self.config.TELEGRAM_TOKEN:
+                raise RuntimeError("TELEGRAM_TOKEN missing")
+            os.makedirs("data/users", exist_ok=True)
+            os.makedirs("data/learning", exist_ok=True)
+            os.makedirs("data/analytics", exist_ok=True)
+            logger.info("✅ Startup checks passed")
+        except Exception as e:
+            logger.error(f"⚠️ startup_checks failed: {e}")
+            # continue anyway
 
-# 6) Multi-model routing stub
-async def route_model(query: str) -> str:
-    model = "GPT-4" if len(query) > 200 else "Claude 3.5"
-    logger.debug("Routing to model: %s", model)
-    return model
+    async def init_components(self):
+        # Initialize each component separately
+        try:
+            self.user_data_manager = UserDataManager()
+        except Exception as e:
+            logger.error(f"⚠️ UserDataManager init failed: {e}")
+        try:
+            self.learning_engine = ContinuousLearningEngine()
+        except Exception as e:
+            logger.error(f"⚠️ LearningEngine init failed: {e}")
+        try:
+            self.shan_d_brain = EnhancedShanD(
+                user_data_manager=self.user_data_manager,
+                learning_engine=self.learning_engine
+            )
+        except Exception as e:
+            logger.error(f"⚠️ EnhancedShanD init failed: {e}")
+        try:
+            self.command_processor = AdvancedCommandProcessor(self.shan_d_brain)
+        except Exception as e:
+            logger.error(f"⚠️ CommandProcessor init failed: {e}")
 
-# 7) Memory update helper
-def update_user_memory(user_id: int, info: Dict[str, Any]):
-    data = USER_MEMORY.setdefault(user_id, {})
-    data.update(info)
-    logger.debug("Memory for %s: %s", user_id, data)
+    async def start_bot(self):
+        if not all([self.shan_d_brain, self.command_processor, self.user_data_manager]):
+            logger.warning("🚧 Bot dependencies missing; skipping bot.start()")
+            return
+        try:
+            self.bot = ShanDBot(
+                self.shan_d_brain,
+                self.command_processor,
+                self.user_data_manager
+            )
+            await self.bot.start()
+        except Exception as e:
+            logger.error(f"⚠️ bot.start failed: {e}")
+            self.bot = None
 
-# 8) Command handlers
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        uid = update.effective_user.id
-        update_user_memory(uid, {"started_at": datetime.now().isoformat()})
-        await update.message.reply_text("🤖 Shan-D online! How can I assist you today?")
-    except Exception as e:
-        await self_heal(e, {"handler": "start", "update": update})
+    async def start(self):
+        await self.startup_checks()
+        await self.init_components()
 
-async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        text = (
-            "/start – Initialize and greet\n"
-            "/help – Show this message\n"
-            "/stats – Performance metrics\n"
-            "/errorstats – Error summary\n"
-        )
-        await update.message.reply_text(text)
-    except Exception as e:
-        await self_heal(e, {"handler": "help", "update": update})
+        self.running = True
 
-async def stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        uptime = (datetime.now() - START_TIME).total_seconds()
-        await update.message.reply_text(
-            f"Uptime: {uptime:.0f}s\nErrors: {ERROR_COUNT}\nUsers: {len(USER_MEMORY)}"
-        )
-    except Exception as e:
-        await self_heal(e, {"handler": "stats", "update": update})
+        # background tasks
+        try:
+            if self.learning_engine:
+                asyncio.create_task(self.learning_engine.continuous_learning_loop())
+        except Exception as e:
+            logger.error(f"⚠️ background learning loop failed: {e}")
+        try:
+            if self.user_data_manager:
+                asyncio.create_task(self.user_data_manager.periodic_user_analysis())
+        except Exception as e:
+            logger.error(f"⚠️ periodic user analysis failed: {e}")
+        try:
+            asyncio.create_task(self._performance_monitoring())
+        except Exception as e:
+            logger.error(f"⚠️ performance monitoring failed: {e}")
 
-async def errorstats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.reply_text(f"Total errors caught: {ERROR_COUNT}")
-    except Exception as e:
-        await self_heal(e, {"handler": "errorstats", "update": update})
+        # Start bot (handles Telegram)
+        await self.start_bot()
 
-# 9) Multimodal handlers (stubs)
-async def process_image(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.reply_text("🖼️ Image received; analyzing now…")
-        # TODO: call vision API, OCR, object detection, etc.
-    except Exception as e:
-        await self_heal(e, {"handler": "process_image", "update": update})
+        # keep running
+        while self.running:
+            await asyncio.sleep(1)
 
-async def process_document(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.reply_text("📄 Document received; summarizing…")
-        # TODO: parse PDF/DOCX, summarize, Q&A
-    except Exception as e:
-        await self_heal(e, {"handler": "process_document", "update": update})
+        await self.cleanup()
 
-# 10) Callback query handler
-async def button_clicked(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        data = update.callback_query.data
-        await update.callback_query.answer(f"Clicked: {data}")
-    except Exception as e:
-        await self_heal(e, {"handler": "button_clicked", "update": update})
+    async def _performance_monitoring(self):
+        while self.running:
+            await asyncio.sleep(3600)
+            try:
+                if self.shan_d_brain:
+                    analytics = await self.shan_d_brain.get_ultra_human_analytics()
+                    logger.info(f"📊 Human-like responses: {analytics.get('human_like_percentage',0):.1f}%")
+            except Exception as e:
+                logger.error(f"⚠️ performance monitoring error: {e}")
 
-# 11) Fallback echo
-async def echo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    try:
-        uid = update.effective_user.id
-        text = update.message.text or ""
-        update_user_memory(uid, {"last_message": text})
-        await update.message.reply_text("Echo: " + text)
-    except Exception as e:
-        await self_heal(e, {"handler": "echo", "update": update})
+    async def cleanup(self):
+        logger.info("🧹 Cleaning up…")
+        if self.bot:
+            try: await self.bot.stop()
+            except Exception as e: logger.error(f"cleanup bot.stop failed: {e}")
+        if self.shan_d_brain:
+            try: await self.shan_d_brain.emergency_save()
+            except Exception as e: logger.error(f"cleanup brain.save failed: {e}")
+        if self.user_data_manager:
+            try: await self.user_data_manager.save_all_pending_data()
+            except Exception as e: logger.error(f"cleanup user_data_manager.save failed: {e}")
+        if self.learning_engine:
+            try: await self.learning_engine.save_learning_state()
+            except Exception as e: logger.error(f"cleanup learning_engine.save failed: {e}")
+        logger.info("👋 Shutdown complete")
 
-# 12) Build Telegram app
-def build_bot():
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    # Register commands
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_cmd))
-    application.add_handler(CommandHandler("stats", stats))
-    application.add_handler(CommandHandler("errorstats", errorstats))
-    # Register multimodal handlers
-    application.add_handler(MessageHandler(filters.PHOTO, process_image))
-    application.add_handler(MessageHandler(filters.Document.ALL, process_document))
-    # Fallback and inline buttons
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-    application.add_handler(CallbackQueryHandler(button_clicked))
-    return application
-
-# 13) Graceful shutdown & run
-def main():
-    bot_app = build_bot()
-
-    def _shutdown(sig, frame):
-        logger.info("Signal %s received, shutting down...", sig)
-        asyncio.get_event_loop().stop()
-
-    signal.signal(signal.SIGINT, _shutdown)
-    signal.signal(signal.SIGTERM, _shutdown)
-
-    logger.info("🚀 Starting Telegram long-polling")
-    bot_app.run_polling()
+async def main():
+    app = UltraShanDApplication()
+    await app.start()
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"💥 Fatal error: {e}")
+        sys.exit(1)
