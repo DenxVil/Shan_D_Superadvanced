@@ -4,7 +4,6 @@
 Shan-D: Ultra-Enhanced Human-like AI Assistant with Advanced Learning
 Created by: ◉Ɗєиνιℓ
 Version: 4.0.0 Ultra-Human Enhanced
-Features: User Analysis, Self-Improvement, Adaptive Personalization
 """
 
 import asyncio
@@ -15,9 +14,16 @@ from pathlib import Path
 from datetime import datetime
 import signal
 
-print("🌟 Shan-D Ultra-Human AI Starting… 🌟")
+# Branding banner
+print("""
+🌟 Shan-D Ultra-Enhanced Human-like AI Assistant 🌟
+Created by: ◉Ɗєиνιℓ | Version: 4.0.0 Ultra-Human Enhanced
+Features: User Analysis, Self-Improvement, Adaptive Personalization
+""")
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Ensure project root on import path
+ROOT = Path(__file__).parent.resolve()
+sys.path.insert(0, str(ROOT))
 
 try:
     from src.telegram.bot import ShanDBot
@@ -28,13 +34,17 @@ try:
     from storage.user_data_manager import UserDataManager
     from core.learning_engine import ContinuousLearningEngine
 except ImportError as e:
-    print(f"❌ Import error: {e}")
+    print(f"❌ Import Error: {e}")
+    print("📦 Installing required packages...")
     os.system("pip install -r requirements.txt")
     sys.exit(1)
 
+# Initialize logger
 logger = setup_logging()
 
 class UltraShanDApplication:
+    """Manages startup, bot, learning loops, and cleanup."""
+
     def __init__(self):
         self.config = Config()
         self.bot = None
@@ -44,64 +54,52 @@ class UltraShanDApplication:
         self.learning_engine = None
         self.running = False
 
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Graceful shutdown handlers
+        signal.signal(signal.SIGINT,  self._on_shutdown)
+        signal.signal(signal.SIGTERM, self._on_shutdown)
 
-    def _signal_handler(self, signum, frame):
+    def _on_shutdown(self, signum, frame):
         logger.info("🛑 Shutdown signal received")
         self.running = False
 
     async def startup_checks(self):
-        try:
-            logger.info("🔍 Running startup checks")
-            if not check_dependencies():
-                raise RuntimeError("Missing dependencies")
-            if not self.config.TELEGRAM_TOKEN:
-                raise RuntimeError("TELEGRAM_TOKEN missing")
-            os.makedirs("data/users", exist_ok=True)
-            os.makedirs("data/learning", exist_ok=True)
-            os.makedirs("data/analytics", exist_ok=True)
-            logger.info("✅ Startup checks passed")
-        except Exception as e:
-            logger.error(f"⚠️ startup_checks failed: {e}")
-            # continue anyway
+        logger.info("🔍 Running startup checks")
+        if not check_dependencies():
+            logger.error("❌ Missing dependencies")
+        if not self.config.TELEGRAM_TOKEN:
+            logger.error("❌ TELEGRAM_TOKEN not set")
+        # Create data directories
+        for d in ("data/users", "data/learning", "data/analytics"):
+            os.makedirs(d, exist_ok=True)
+        logger.info("✅ Startup checks complete")
 
     async def init_components(self):
-        # Initialize each component separately
         try:
             self.user_data_manager = UserDataManager()
+            logger.info("UserDataManager initialized")
         except Exception as e:
-            logger.error(f"⚠️ UserDataManager init failed: {e}")
+            logger.error(f"UserDataManager failed: {e}")
+
         try:
             self.learning_engine = ContinuousLearningEngine()
+            logger.info("LearningEngine initialized")
         except Exception as e:
-            logger.error(f"⚠️ LearningEngine init failed: {e}")
+            logger.error(f"LearningEngine failed: {e}")
+
         try:
             self.shan_d_brain = EnhancedShanD(
                 user_data_manager=self.user_data_manager,
                 learning_engine=self.learning_engine
             )
+            logger.info("EnhancedShanD brain initialized")
         except Exception as e:
-            logger.error(f"⚠️ EnhancedShanD init failed: {e}")
+            logger.error(f"EnhancedShanD init failed: {e}")
+
         try:
             self.command_processor = AdvancedCommandProcessor(self.shan_d_brain)
+            logger.info("CommandProcessor initialized")
         except Exception as e:
-            logger.error(f"⚠️ CommandProcessor init failed: {e}")
-
-    async def start_bot(self):
-        if not all([self.shan_d_brain, self.command_processor, self.user_data_manager]):
-            logger.warning("🚧 Bot dependencies missing; skipping bot.start()")
-            return
-        try:
-            self.bot = ShanDBot(
-                self.shan_d_brain,
-                self.command_processor,
-                self.user_data_manager
-            )
-            await self.bot.start()
-        except Exception as e:
-            logger.error(f"⚠️ bot.start failed: {e}")
-            self.bot = None
+            logger.error(f"CommandProcessor failed: {e}")
 
     async def start(self):
         await self.startup_checks()
@@ -109,26 +107,26 @@ class UltraShanDApplication:
 
         self.running = True
 
-        # background tasks
-        try:
-            if self.learning_engine:
-                asyncio.create_task(self.learning_engine.continuous_learning_loop())
-        except Exception as e:
-            logger.error(f"⚠️ background learning loop failed: {e}")
-        try:
-            if self.user_data_manager:
-                asyncio.create_task(self.user_data_manager.periodic_user_analysis())
-        except Exception as e:
-            logger.error(f"⚠️ periodic user analysis failed: {e}")
-        try:
-            asyncio.create_task(self._performance_monitoring())
-        except Exception as e:
-            logger.error(f"⚠️ performance monitoring failed: {e}")
+        # Launch background tasks
+        if self.learning_engine:
+            asyncio.create_task(self.learning_engine.continuous_learning_loop())
+        if self.user_data_manager:
+            asyncio.create_task(self.user_data_manager.periodic_user_analysis())
+        asyncio.create_task(self._performance_monitoring())
 
-        # Start bot (handles Telegram)
-        await self.start_bot()
+        # Start Telegram bot
+        try:
+            self.bot = ShanDBot(
+                self.shan_d_brain,
+                self.command_processor,
+                self.user_data_manager
+            )
+            await self.bot.start()
+            logger.info("✅ Telegram bot started")
+        except Exception as e:
+            logger.error(f"Telegram bot start failed: {e}")
 
-        # keep running
+        # Keep application alive until shutdown signal
         while self.running:
             await asyncio.sleep(1)
 
@@ -138,26 +136,22 @@ class UltraShanDApplication:
         while self.running:
             await asyncio.sleep(3600)
             try:
-                if self.shan_d_brain:
-                    analytics = await self.shan_d_brain.get_ultra_human_analytics()
-                    logger.info(f"📊 Human-like responses: {analytics.get('human_like_percentage',0):.1f}%")
+                stats = await self.shan_d_brain.get_ultra_human_analytics()
+                pct = stats.get("human_like_percentage", 0)
+                logger.info(f"📊 Human-like responses: {pct:.1f}%")
             except Exception as e:
-                logger.error(f"⚠️ performance monitoring error: {e}")
+                logger.error(f"Monitoring error: {e}")
 
     async def cleanup(self):
-        logger.info("🧹 Cleaning up…")
+        logger.info("🧹 Cleaning up resources")
         if self.bot:
-            try: await self.bot.stop()
-            except Exception as e: logger.error(f"cleanup bot.stop failed: {e}")
+            await self.bot.stop()
         if self.shan_d_brain:
-            try: await self.shan_d_brain.emergency_save()
-            except Exception as e: logger.error(f"cleanup brain.save failed: {e}")
+            await self.shan_d_brain.emergency_save()
         if self.user_data_manager:
-            try: await self.user_data_manager.save_all_pending_data()
-            except Exception as e: logger.error(f"cleanup user_data_manager.save failed: {e}")
+            await self.user_data_manager.save_all_pending_data()
         if self.learning_engine:
-            try: await self.learning_engine.save_learning_state()
-            except Exception as e: logger.error(f"cleanup learning_engine.save failed: {e}")
+            await self.learning_engine.save_learning_state()
         logger.info("👋 Shutdown complete")
 
 async def main():
