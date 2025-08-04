@@ -229,7 +229,7 @@ class ShanDApplication:
         pairs = [
             ("emotion_engine", "AdvancedEmotionEngine"),
             ("memory_manager", "AdvancedMemoryManager"),
-            ("learning_engine", "ContinousLearningEngine"),
+            ("learning_engine", "ContinuousLearningEngine"),
             ("model_manager", "AdvancedModelManager"),
             ("conversation_flow", "ShanDConversationFlow"),
             ("multimodal_processor", "MultimodalProcessor"),
