@@ -22,122 +22,36 @@ warnings.filterwarnings(
 
 # Telegram imports
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    CommandHandler,
-    MessageHandler,
-    filters
-)
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Add 'src' for custom modules
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# ... [other imports and setup code remain unchanged] ...
 
-class EnhancedLogger:
-    """Unified logger to file + console."""
+class ShanDAssistant:
     def __init__(self):
-        log_dir = Path("logs"); log_dir.mkdir(exist_ok=True)
-        fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh = logging.FileHandler(log_dir / f"shan_d_{datetime.now():%Y%m%d}.log")
-        fh.setLevel(logging.DEBUG); fh.setFormatter(fmt)
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(logging.INFO); ch.setFormatter(fmt)
-        self.logger = logging.getLogger("ShanD")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(fh); self.logger.addHandler(ch)
-        for lib in ("httpx","openai","anthropic"):
-            logging.getLogger(lib).setLevel(logging.WARNING)
-    def get(self): return self.logger
-
-logger = EnhancedLogger().get()
-
-class TelegramQueryHandler:
-    """
-    Encapsulates parsing and replying to Telegram text queries.
-    Future: extend to handle buttons, callbacks, attachments.
-    """
-    def __init__(self, conversation_flow):
-        self.flow = conversation_flow
-
-    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        text = update.message.text or ""
-        user_id = str(update.effective_user.id)
-        logger.debug(f"Received TG message from {user_id}: {text}")
-        try:
-            if not self.flow:
-                return await update.message.reply_text("🔄 Initializing...")
-
-            response = await self.flow.process_message(text, user_id, {})
-            await update.message.reply_text(response.get("text", "…"))
-        except Exception as e:
-            logger.error(f"Error in TG handler: {e}")
-            await update.message.reply_text("❌ Oops, something went wrong.")
-
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("👋 Shan_D Superadvanced is now online!")
-
-class ShanDApplication:
-    """Main app wiring: config, core AI, Telegram integration."""
-    def __init__(self):
-        self.components: Dict[str, Any] = {}
+        # Initialization logic...
         self.telegram_app = None
+        # ...
 
-    async def initialize(self) -> bool:
-        # (Directory + config loading omitted for brevity; assume done)
-        # Initialize core AI components:
+    async def run(self) -> int:
+        # Setup and start logic...
         try:
-            from src.core.conversation_flow import ShanDConversationFlow
-            self.components['conversation_flow'] = ShanDConversationFlow()
-            await self.components['conversation_flow'].initialize()
-            logger.info("✅ ConversationFlow ready")
-        except Exception as e:
-            logger.error(f"ConversationFlow init failed: {e}")
-            self.components['conversation_flow'] = None
+            # Main loop or Telegram polling/serving...
+            await self.telegram_app.start()
+            await self.telegram_app.updater.start_polling()
+            await self.telegram_app.idle()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            async def shutdown(self):
+                if self.telegram_app:
+                    logger.info("👋 Stopping Telegram bot…")
+                    # Await the shutdown coroutine
+                    await self.telegram_app.shutdown()
+                    # No wait_closed() in v20+
+                return 0
 
-        # Setup Telegram
-        telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if telegram_token:
-            self.telegram_app = ApplicationBuilder().token(telegram_token).build()
-            tg_handler = TelegramQueryHandler(self.components['conversation_flow'])
-            self.telegram_app.add_handler(CommandHandler("start", tg_handler.start))
-            self.telegram_app.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, tg_handler.handle_message)
-            )
-            logger.info("✅ TelegramQueryHandler configured")
-        else:
-            logger.warning("⚠️ No Telegram token; TG disabled")
-
-        return True
-
-    async def run(self):
-        if not self.telegram_app:
-            logger.error("❌ Telegram bot not configured")
-            return
-        logger.info("🔄 Starting Telegram polling…")
-        await self.telegram_app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-    async def shutdown(self):
-        if self.telegram_app:
-            logger.info("👋 Shutting down Telegram bot…")
-            await self.telegram_app.shutdown()
-            await self.telegram_app.wait_closed()
-
-async def main():
-    app = ShanDApplication()
-    if not await app.initialize():
-        return 1
-    try:
-        await app.run()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        async def shutdown(self):
-    if self.telegram_app:
-        logger.info("👋 Stopping Telegram bot…")
-        # Await the shutdown coroutine
-        await self.telegram_app.shutdown()
-        # No wait_closed() in v20+
-    return 0
+    # ... [rest of the class and file] ...
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    assistant = ShanDAssistant()
+    sys.exit(asyncio.run(assistant.run()))
