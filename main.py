@@ -7,7 +7,6 @@ import os
 import sys
 import asyncio
 import logging
-import traceback
 import warnings
 from pathlib import Path
 from datetime import datetime
@@ -20,37 +19,50 @@ warnings.filterwarnings(
     message="Enable tracemalloc to get the object allocation traceback"
 )
 
-# Telegram imports
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# ... [other imports and setup code remain unchanged] ...
+# [Other imports and setup...]
 
 class ShanDAssistant:
     def __init__(self):
-        # Initialization logic...
-        self.telegram_app = None
-        # ...
+        # Properly initialize the Telegram Application
+        token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        if not token:
+            raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
+        self.telegram_app = Application.builder().token(token).build()
+        self._register_handlers()
+
+    def _register_handlers(self):
+        # Example handler registrations
+        self.telegram_app.add_handler(CommandHandler("start", self.start))
+        self.telegram_app.add_handler(CommandHandler("help", self.help))
+        # Add other command and message handlers here...
+
+    async def start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        await ctx.bot.send_message(chat_id=update.effective_chat.id, text="Welcome to Shan-D!")
+
+    async def help(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        await ctx.bot.send_message(chat_id=update.effective_chat.id, text="Help info here.")
 
     async def run(self) -> int:
-        # Setup and start logic...
         try:
-            # Main loop or Telegram polling/serving...
+            # Start the bot
             await self.telegram_app.start()
+            # Begin polling for updates
             await self.telegram_app.updater.start_polling()
+            # Idle until interrupted
             await self.telegram_app.idle()
         except KeyboardInterrupt:
             pass
         finally:
-            async def shutdown(self):
+            # Shutdown routine nested under finally
+            async def shutdown():
                 if self.telegram_app:
-                    logger.info("👋 Stopping Telegram bot…")
-                    # Await the shutdown coroutine
+                    logging.info("👋 Stopping Telegram bot…")
                     await self.telegram_app.shutdown()
-                    # No wait_closed() in v20+
                 return 0
-
-    # ... [rest of the class and file] ...
+            return await shutdown()
 
 if __name__ == "__main__":
     assistant = ShanDAssistant()
