@@ -1,34 +1,43 @@
 # main.py
 
 import os
+import sys
 from dotenv import load_dotenv
 
+# 1. Early .env loading & validation
 def load_environment_overrides():
     """
-    1. Loads variables from a `.env` file (if present).
-    2. Reads existing shell environment variables.
-    3. Exposes both via os.environ for downstream modules.
+    - Load `.env`.
+    - Enforce required vars.
     """
-    # 1. Locate and load .env in project root
-    load_dotenv()  # by default looks for a .env file alongside main.py
-    
-    # 2. Optionally, enforce required variables
-    required = ["API_KEY", "DB_URL", "TELEGRAM_TOKEN"]
-    missing = [var for var in required if not os.getenv(var)]
+    load_dotenv()  # loads .env into os.environ
+
+    required = [
+        "API_KEY",
+        "DB_URL",
+        "TELEGRAM_TOKEN",
+        # add any other required names here…
+    ]
+    missing = [v for v in required if not os.getenv(v)]
     if missing:
         raise RuntimeError(f"Missing required environment vars: {', '.join(missing)}")
-    
-    # 3. Example of in-process override:
-    #    If you want to force a non-production DB in DEV, you can detect an ENV flag:
-    if os.getenv("ENV") == "development":
-        os.environ["DB_URL"] = os.getenv("DB_URL", "sqlite:///dev.db")
 
-
-# Call our loader as early as possible
 load_environment_overrides()
 
 
-import sys
+# 2. Build config purely from environment
+class Config:
+    def __init__(self):
+        self.api_key        = os.environ["API_KEY"]
+        self.database_url   = os.environ["DB_URL"]
+        self.telegram_token = os.environ["TELEGRAM_TOKEN"]
+        # add any other settings here…
+        # e.g. self.log_level = os.environ.get("LOG_LEVEL", "INFO")
+
+cfg = Config()
+
+
+# 3. Imports only after cfg is ready
 from src.TelegramX.telegram_bot import TelegramBot
 from src.core.conversation_flow import ConversationFlow
 from src.core.emotion_engine import EmotionEngine
@@ -41,25 +50,14 @@ from src.core.reasoning_engine import ReasoningEngine
 from src.core.shan_d_enhanced import ShanDEnhanced
 from src.storage.analytics_engine import AnalyticsEngine
 from src.storage.user_data_manager import UserDataManager
-from src.utils.config import load_config
 from src.utils.advanced_security import advanced_security_scan
 
 
 def main():
-    # 4. Load file-based defaults
-    cfg = load_config()
+    # 4. Initialize all components with env-only config
+    user_db     = UserDataManager(cfg)
+    analytics   = AnalyticsEngine()
 
-    # 5. Override config values from environment
-    #    Assume load_config returns a simple Namespace or dict
-    cfg.telegram.token = os.getenv("TELEGRAM_TOKEN", cfg.telegram.token)
-    cfg.database.url   = os.getenv("DB_URL", cfg.database.url)
-    cfg.api_key        = os.getenv("API_KEY", cfg.api_key)
-
-    # Initialize storage & analytics
-    user_db   = UserDataManager(cfg)
-    analytics = AnalyticsEngine()
-
-    # Initialize core engines
     memory      = MemoryManager(cfg)
     model_mgr   = ModelManager(cfg)
     learning    = LearningEngine(cfg)
@@ -74,36 +72,26 @@ def main():
         learning_engine=learning,
         analytics_engine=analytics,
     )
-    enhanced   = ShanDEnhanced(convo_flow, cfg)
+    enhanced    = ShanDEnhanced(convo_flow, cfg)
+    error_hdlr  = ErrorHandler()
 
-    # Error handling
-    error_handler = ErrorHandler()
-
-    # CLI vs Telegram
+    # 5. Choose interface
     if len(sys.argv) > 1 and sys.argv[1] == "--cli":
-        print("Shan-D Superadvanced CLI: Type your message or 'exit' to quit.")
+        print("CLI mode: type messages or 'exit'.")
         while True:
-            user_input = input("> ")
-            if user_input.lower() in ("exit", "quit"):
+            text = input("> ")
+            if text.lower() in ("exit","quit"):
                 break
-
-            advanced_security_scan(user_input)
-
+            advanced_security_scan(text)
             try:
-                response = enhanced.get_response(user_input)
+                resp = enhanced.get_response(text)
             except Exception as e:
-                response = error_handler.handle_errors(e, context=user_input)
-
-            user_db.save_interaction(user_input, response)
-            analytics._update_metrics(user_input, response)
-
-            print(response)
+                resp = error_hdlr.handle_errors(e, context=text)
+            user_db.save_interaction(text, resp)
+            analytics._update_metrics(text, resp)
+            print(resp)
     else:
-        # Telegram bot
-        bot = TelegramBot(
-            token=cfg.telegram.token,
-            get_response=enhanced.get_response
-        )
+        bot = TelegramBot(token=cfg.telegram_token, get_response=enhanced.get_response)
         bot.start_polling()
 
 
