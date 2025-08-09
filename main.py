@@ -2,47 +2,7 @@
 
 import os
 import sys
-from dotenv import load_dotenv
 
-# 1. Early .env loading & validation
-def load_environment_overrides():
-    """
-    - Load `.env`.
-    - Enforce required vars.
-    """
-    load_dotenv()  # loads .env into os.environ
-
-    required = [
-        #"API_KEY",
-       # "DB_URL",
-        "TELEGRAM_TOKEN",
-        "GROQ_API_KEY" ,
-        "OPENAI_API_KEY",
-        
-        # add any other required names here…
-    ]
-    missing = [v for v in required if not os.getenv(v)]
-    if missing:
-        raise RuntimeError(f"Missing required environment vars: {', '.join(missing)}")
-
-load_environment_overrides()
-
-
-# 2. Build config purely from environment
-class Config:
-    def __init__(self):
-        #self.api_key        = os.environ["API_KEY"]
-        #self.database_url   = os.environ["DB_URL"]
-        self.telegram_token = os.environ["TELEGRAM_TOKEN"]
-        self.grok = os.environ["GROQ_API_KEY"]
-        self.openai = os.environ["OPENAI_API_KEY"]
-        # add any other settings here…
-        # e.g. self.log_level = os.environ.get("LOG_LEVEL", "INFO")
-
-cfg = Config()
-
-
-# 3. Imports only after cfg is ready
 from src.TelegramX.telegram_bot import TelegramBot
 from src.core.conversation_flow import ConversationFlow
 from src.core.emotion_engine import EmotionEngine
@@ -55,14 +15,28 @@ from src.core.reasoning_engine import ReasoningEngine
 from src.core.shan_d_enhanced import ShanDEnhanced
 from src.storage.analytics_engine import AnalyticsEngine
 from src.storage.user_data_manager import UserDataManager
+from src.utils.config import load_config
 from src.utils.advanced_security import advanced_security_scan
 
 
 def main():
-    # 4. Initialize all components with env-only config
-    user_db     = UserDataManager(cfg)
-    analytics   = AnalyticsEngine()
+    # 1. Read Telegram credentials explicitly from environment
+    try:
+        api_token = os.environ["TELEGRAM_BOT_TOKEN"]
+    except KeyError:
+        sys.exit("Error: Missing env var TELEGRAM_BOT_TOKEN. Please set it and rerun.")
 
+    # Load other configuration
+    cfg = load_config()
+
+    # Override cfg.telegram.token with the environment value
+    cfg.telegram.token = api_token
+
+    # Initialize storage & analytics
+    user_db    = UserDataManager(cfg)
+    analytics  = AnalyticsEngine()
+
+    # Initialize core engines
     memory      = MemoryManager(cfg)
     model_mgr   = ModelManager(cfg)
     learning    = LearningEngine(cfg)
@@ -78,25 +52,37 @@ def main():
         analytics_engine=analytics,
     )
     enhanced    = ShanDEnhanced(convo_flow, cfg)
-    error_hdlr  = ErrorHandler()
 
-    # 5. Choose interface
+    # Setup error handling
+    error_handler = ErrorHandler()
+
+    # Initialize Telegram bot interface with only the env var token
+    bot = TelegramBot(
+        token=cfg.telegram.token,
+        get_response=enhanced.get_response
+    )
+
+    # Command-line loop fallback
     if len(sys.argv) > 1 and sys.argv[1] == "--cli":
-        print("CLI mode: type messages or 'exit'.")
+        print("Shan-D Superadvanced CLI: Type your message or 'exit' to quit.")
         while True:
-            text = input("> ")
-            if text.lower() in ("exit","quit"):
+            user_input = input("> ")
+            if user_input.lower() in ("exit", "quit"):
                 break
-            advanced_security_scan(text)
+
+            advanced_security_scan(user_input)
+
             try:
-                resp = enhanced.get_response(text)
+                response = enhanced.get_response(user_input)
             except Exception as e:
-                resp = error_hdlr.handle_errors(e, context=text)
-            user_db.save_interaction(text, resp)
-            analytics._update_metrics(text, resp)
-            print(resp)
+                response = error_handler.handle_errors(e, context=user_input)
+
+            user_db.save_interaction(user_input, response)
+            analytics._update_metrics(user_input, response)
+
+            print(response)
+
     else:
-        bot = TelegramBot(token=cfg.telegram_token, get_response=enhanced.get_response)
         bot.start_polling()
 
 
