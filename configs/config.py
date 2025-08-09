@@ -17,7 +17,7 @@ class Config:
     
     def __init__(self):
         # Core Bot Settings
-        self.TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+        self.TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
         
         # AI Model Configuration
         self.OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
