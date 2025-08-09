@@ -1,80 +1,57 @@
 #!/usr/bin/env python3
-
 """
-Shan_D Superadvanced AI Assistant – Telegram-Centric Edition
+Unified entrypoint: loads env, builds the Telegram bot with all handlers from TelegramX,
+and runs polling.
 """
 
 import os
 import sys
-import asyncio
 import logging
 import warnings
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    ContextTypes,
-)
+from telegram.ext import ApplicationBuilder
 
-# Suppress PTB “Enable tracemalloc” warning
+# Suppress PTB “Enable tracemalloc” warnings
 warnings.filterwarnings(
     "ignore",
     category=RuntimeWarning,
     message="Enable tracemalloc to get the object allocation traceback"
 )
 
-class ShanDAssistant:
-    def __init__(self):
-        # 1. Load .env and override any existing environment variables
-        load_dotenv(override=True)
+# Ensure project root is on PYTHONPATH so src/TelegramX can be imported
+ROOT = os.path.dirname(__file__)
+sys.path.insert(0, ROOT)
 
-        # 2. Retrieve and confirm the token
-        token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        if not token:
-            raise ValueError("Environment variable TELEGRAM_BOT_TOKEN is required")
-        print(f"Using TELEGRAM_BOT_TOKEN={token}")
+# 1. Load .env (override existing env vars) and configure logging
+load_dotenv(override=True)
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+if not TELEGRAM_TOKEN:
+    raise RuntimeError("Missing TELEGRAM_BOT_TOKEN in environment")
 
-        # 3. Build the PTB v20 Application
-        self.telegram_app = (
-            ApplicationBuilder()
-            .token(token)
-            .build()
-        )
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(name)s – %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+logger.info("Using TELEGRAM_BOT_TOKEN=%s", TELEGRAM_TOKEN)
 
-        # 4. Register handlers
-        self._register_handlers()
+# 2. Import your TelegramX bot and handlers
+from src.TelegramX.telegram_bot import TelegramBot
+from src.TelegramX.handlers import register_handlers
 
-    def _register_handlers(self):
-        # Simple /start handler
-        self.telegram_app.add_handler(
-            CommandHandler("start", self.start)
-        )
-        # Simple /help handler
-        self.telegram_app.add_handler(
-            CommandHandler("help", self.help)
-        )
-        # Add your other handlers here...
+def main():
+    # 3. Build the Application
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    async def start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-        user = update.effective_user
-        await ctx.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"Welcome to Shan-D, {user.first_name}!"
-        )
+    # 4. Instantiate your TelegramBot helper (if it wraps shared state)
+    bot_helper = TelegramBot(app)
 
-    async def help(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-        await ctx.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="Type /start to begin or ask me anything."
-        )
+    # 5. Register all handlers defined in TelegramX/handlers.py
+    register_handlers(app, bot_helper)
 
-    def run(self) -> int:
-        # 5. Run polling (handles initialize(), start(), and idle() internally)
-        self.telegram_app.run_polling()
-
-        return 0
+    # 6. Start polling (initializes bot, dispatcher, etc.)
+    logger.info("Starting bot polling…")
+    app.run_polling()
 
 if __name__ == "__main__":
-    assistant = ShanDAssistant()
-    sys.exit(assistant.run())
+    main()
