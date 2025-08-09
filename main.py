@@ -16,6 +16,9 @@ def load_environment_overrides():
         "API_KEY",
         "DB_URL",
         "TELEGRAM_TOKEN",
+        "GROQ_API_KEY" ,
+        "OPENAI_API_KEY",
+        
         # add any other required names here…
     ]
     missing = [v for v in required if not os.getenv(v)]
@@ -29,8 +32,10 @@ load_environment_overrides()
 class Config:
     def __init__(self):
         self.api_key        = os.environ["API_KEY"]
-        self.database_url   = os.environ["DB_URL"]
+        #self.database_url   = os.environ["DB_URL"]
         self.telegram_token = os.environ["TELEGRAM_TOKEN"]
+        self.grok = os.environ["GROQ_API_KEY"]
+        self.openai = os.environ["OPENAI_API_KEY"]
         # add any other settings here…
         # e.g. self.log_level = os.environ.get("LOG_LEVEL", "INFO")
 
