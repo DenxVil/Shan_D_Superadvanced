@@ -13,8 +13,8 @@ def load_environment_overrides():
     load_dotenv()  # loads .env into os.environ
 
     required = [
-        "API_KEY",
-        "DB_URL",
+        #"API_KEY",
+       # "DB_URL",
         "TELEGRAM_TOKEN",
         "GROQ_API_KEY" ,
         "OPENAI_API_KEY",
@@ -31,7 +31,7 @@ load_environment_overrides()
 # 2. Build config purely from environment
 class Config:
     def __init__(self):
-        self.api_key        = os.environ["API_KEY"]
+        #self.api_key        = os.environ["API_KEY"]
         #self.database_url   = os.environ["DB_URL"]
         self.telegram_token = os.environ["TELEGRAM_TOKEN"]
         self.grok = os.environ["GROQ_API_KEY"]
