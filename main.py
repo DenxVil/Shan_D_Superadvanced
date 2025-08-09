@@ -1,56 +1,151 @@
 #!/usr/bin/env python3
 """
-Unified entrypoint: loads env, builds the Telegram bot with all handlers from TelegramX,
-and runs polling.
+Unified Shan_D Superadvanced – all modules in one Telegram bot entrypoint
 """
 
 import os
 import sys
 import logging
 import warnings
+import functools
+from pathlib import Path
 from dotenv import load_dotenv
-from telegram.ext import ApplicationBuilder
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-# Suppress PTB “Enable tracemalloc” warnings
+# Suppress PTB tracemalloc warning
 warnings.filterwarnings(
     "ignore",
     category=RuntimeWarning,
     message="Enable tracemalloc to get the object allocation traceback"
 )
 
-# Ensure project root is on PYTHONPATH so src/TelegramX can be imported
-ROOT = os.path.dirname(__file__)
-sys.path.insert(0, ROOT)
-
-# 1. Load .env (override existing env vars) and configure logging
-load_dotenv(override=True)
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-if not TELEGRAM_TOKEN:
-    raise RuntimeError("Missing TELEGRAM_BOT_TOKEN in environment")
-
+# Configure logging
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s – %(message)s",
-    level=logging.INFO,
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-logger.info("Using TELEGRAM_BOT_TOKEN=%s", TELEGRAM_TOKEN)
 
-# 2. Import your TelegramX bot and handlers
-from src.TelegramX.telegram_bot import TelegramBot
-from src.TelegramX.handlers import register_handlers
+# Safe‐execution decorator
+def safe_handler(func):
+    @functools.wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            await func(update, context)
+        except Exception as e:
+            user = update.effective_user.id if update.effective_user else "unknown"
+            chat = update.effective_chat.id if update.effective_chat else "unknown"
+            logger.error(
+                "Error in handler %s (user=%s chat=%s): %s",
+                func.__name__, user, chat, e,
+                exc_info=True
+            )
+            try:
+                await context.bot.send_message(
+                    chat_id=chat,
+                    text="⚠️ An error occurred—skipping this command."
+                )
+            except Exception:
+                pass
+    return wrapper
+
+# Load environment (override existing)
+load_dotenv(override=True)
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+if not TOKEN:
+    raise RuntimeError("Missing TELEGRAM_BOT_TOKEN environment variable")
+
+# Ensure modules can be imported
+ROOT = Path(__file__).parent.resolve()
+SRC = ROOT / "src"
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(SRC))
+
+# Import core services
+from core.model_manager import AdvancedModelManager
+from core.reasoning_engine import AdvancedReasoningEngine
+from core.multimodal_processor import MultimodalProcessor
+from core.error_handler import AdvancedErrorHandler, handle_errors
+from core.conversation_flow import ConversationFlow
+from core.learning_engine import LearningEngine
+from core.memory_manager import MemoryManager
+from core.personality import PersonalityProfile
+
+# Import AI wrappers
+from models.llm_handler import LLMHandler
+from models.knowledge_retriever import KnowledgeRetriever
+
+# Import storage
+from storage.user_data_manager import UserDataManager
+from storage.analytics_engine import AnalyticsEngine
+
+# Import utils
+from utils.helpers import format_message
+from utils.config import load_config
+
+# Import TelegramX helpers
+from TelegramX.telegram_bot import TelegramBotHelper
+from TelegramX.handlers import register_handlers as register_tx_handlers
 
 def main():
-    # 3. Build the Application
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    logger.info("Starting Shan_D Superadvanced bot…")
 
-    # 4. Instantiate your TelegramBot helper (if it wraps shared state)
-    bot_helper = TelegramBot(app)
+    # Initialize core services
+    cfg = load_config()
+    ai = LLMHandler(cfg)
+    km = KnowledgeRetriever(cfg)
+    memory = MemoryManager()
+    multimodal = MultimodalProcessor(cfg)
+    personality = PersonalityProfile(cfg)
+    reasoning = AdvancedReasoningEngine(ai, memory)
+    learning = LearningEngine(ai, memory)
+    conversation = ConversationFlow(ai, reasoning, km, multimodal, personality, learning)
+    user_data = UserDataManager()
+    analytics = AnalyticsEngine()
 
-    # 5. Register all handlers defined in TelegramX/handlers.py
-    register_handlers(app, bot_helper)
+    # Build Telegram application
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    # 6. Start polling (initializes bot, dispatcher, etc.)
-    logger.info("Starting bot polling…")
+    # Wrap services in helper
+    bot_helper = TelegramBotHelper(
+        app=app,
+        ai=ai,
+        knowledge=km,
+        memory=memory,
+        reasoning=reasoning,
+        multimodal=multimodal,
+        personality=personality,
+        learning=learning,
+        conversation=conversation,
+        user_data=user_data,
+        analytics=analytics,
+        config=cfg,
+    )
+
+    # Register all handlers (with safe wrapper)
+    register_tx_handlers(app, bot_helper, wrapper=safe_handler)
+
+    # Example: expose generic /ask command
+    @safe_handler
+    async def ask(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        question = " ".join(ctx.args)
+        if not question:
+            await update.message.reply_text("Usage: /ask <your question>")
+            return
+        answer = await conversation.handle_question(question, user_id=update.effective_user.id)
+        await update.message.reply_text(answer)
+
+    app.add_handler(CommandHandler("ask", ask))
+
+    # Start polling
+    logger.info("Running Telegram polling…")
     app.run_polling()
 
 if __name__ == "__main__":
