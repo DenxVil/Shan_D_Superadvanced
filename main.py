@@ -75,7 +75,7 @@ from core.multimodal_processor import MultimodalProcessor
 from core.error_handler import AdvancedErrorHandler, handle_errors
 from core.conversation_flow import ShanDConversationFlow
 from core.learning_engine import ContinuousLearningEngine
-from core.memory_manager import AdvancedModelManager
+from core.memory_manager import AdvancedMemoryManager
 from core.personality import PersonalityProfile
 
 # Import AI wrappers
