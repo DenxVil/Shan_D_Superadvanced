@@ -51,3 +51,5 @@ aiohttp-session>=2.12.0
 uvloop>=0.17.0  # For better async performance
 gunicorn>=21.2.0  # For production deployment
 
+# Language translation
+googletrans==4.0.0rc1
