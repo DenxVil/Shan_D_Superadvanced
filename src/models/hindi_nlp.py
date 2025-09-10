@@ -7,7 +7,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 import re
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class HindiNLPProcessor:
     """Advanced Hindi NLP processing"""
     
     def __init__(self):
-        self.translator = Translator()
+        self.translator = GoogleTranslator(source='auto', target='en')
         self.hindi_patterns = self._load_hindi_patterns()
         logger.info("🇮🇳 HindiNLPProcessor initialized by ◉Ɗєиνιℓ")
     
@@ -26,7 +26,7 @@ class HindiNLPProcessor:
             "emotions": {
                 "खुश": "happy",
                 "दुखी": "sad", 
-                "गुस्सा": "angry",
+                "गु���्सा": "angry",
                 "प्रेम": "love"
             },
             "common_words": {
@@ -82,8 +82,8 @@ class HindiNLPProcessor:
     async def _translate_to_english(self, text: str) -> str:
         """Translate Hindi text to English"""
         try:
-            result = self.translator.translate(text, src='hi', dest='en')
-            return result.text
+            result = self.translator.translate(text)
+            return result
         except Exception as e:
             logger.error(f"Translation failed: {e}")
             return text
