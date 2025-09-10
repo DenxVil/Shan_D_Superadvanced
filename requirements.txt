@@ -52,4 +52,4 @@ uvloop>=0.17.0  # For better async performance
 gunicorn>=21.2.0  # For production deployment
 
 # Language translation
-googletrans==4.0.0rc1
+deep-translator>=1.11.4
