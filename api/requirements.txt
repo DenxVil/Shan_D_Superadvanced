@@ -1,0 +1,6 @@
+# API-specific requirements for Vercel deployment
+# Minimal requirements to ensure the website works
+fastapi>=0.100.0
+uvicorn>=0.20.0
+httpx>=0.24.0
+python-multipart>=0.0.6
