@@ -1,5 +1,28 @@
 {
+  "functions": {
+    "api/webhook.py": {
+      "runtime": "python3.9"
+    },
+    "api/chat.py": {
+      "runtime": "python3.9"
+    }
+  },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/webhook" }
+    {
+      "source": "/api/webhook",
+      "destination": "/api/webhook.py"
+    },
+    {
+      "source": "/api/chat", 
+      "destination": "/api/chat.py"
+    },
+    {
+      "source": "/",
+      "destination": "/static/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/static/$1"
+    }
   ]
 }
