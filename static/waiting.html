@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generation - Please Wait</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 30px auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .status-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .attempts-counter {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        
+        .attempts-number {
+            font-size: 36px;
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            animation: progress 3s ease-in-out infinite;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        
+        .certificate-id {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏳ Generating Your Certificate</h1>
+        <p class="subtitle">Please wait while we create your certificate...</p>
+        
+        <div class="spinner"></div>
+        
+        <div class="attempts-counter">
+            <div>Generation Attempts</div>
+            <span class="attempts-number" id="attemptCount">0</span>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="status-box">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="status">Processing</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Certificate ID:</span>
+                <span class="status-value" id="certId">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Started:</span>
+                <span class="status-value" id="startTime">-</span>
+            </div>
+        </div>
+        
+        <p class="info-text">
+            Your certificate is being generated with pixel-perfect accuracy. 
+            This process ensures that your certificate matches our quality standards.
+            You will be redirected automatically when complete.
+        </p>
+    </div>
+
+    <script>
+        // Get certificate ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const certificateId = urlParams.get('id') || 'UNKNOWN';
+        
+        // Display certificate ID
+        document.getElementById('certId').textContent = certificateId;
+        
+        // Display start time
+        const startTime = new Date().toLocaleTimeString();
+        document.getElementById('startTime').textContent = startTime;
+        
+        // Poll for updates
+        let pollInterval;
+        let attemptCount = 0;
+        
+        function updateAttempts() {
+            // Fetch current attempt count from server
+            fetch(`/api/certificate/status/${certificateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.attempts !== undefined) {
+                        attemptCount = data.attempts;
+                        document.getElementById('attemptCount').textContent = attemptCount;
+                    }
+                    
+                    if (data.status) {
+                        document.getElementById('status').textContent = data.status;
+                    }
+                    
+                    // If completed, redirect or show success
+                    if (data.status === 'completed' || data.status === 'success') {
+                        clearInterval(pollInterval);
+                        window.location.href = `/certificate/download/${certificateId}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    // Increment locally if server unavailable
+                    attemptCount++;
+                    document.getElementById('attemptCount').textContent = attemptCount;
+                });
+        }
+        
+        // Start polling every 2 seconds
+        pollInterval = setInterval(updateAttempts, 2000);
+        
+        // Initial update
+        updateAttempts();
+    </script>
+</body>
+</html>
