@@ -46,6 +46,8 @@ venv.bak/
 data/users/*/
 data/learning/
 data/analytics/
+data/certificates/
+!templates/Sample_certificate.png
 *.db
 *.sqlite
 

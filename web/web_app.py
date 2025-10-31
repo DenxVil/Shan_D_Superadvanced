@@ -22,6 +22,9 @@ from ..core.reasoning_engine import AdvancedReasoningEngine
 from ..core.multimodal_processor import MultimodalProcessor
 from ..bot.telegram_bot import ShanDAdvanced
 from ..utils.config import load_config
+from ..utils.certificate_generator import certificate_generator
+from ..utils.mail_config import mail_config
+from ..storage.certificate_db import certificate_db
 
 class ShanDWebApp:
     """Web application wrapper for Shan_D_Superadvanced"""
@@ -104,6 +107,11 @@ class ShanDWebApp:
             ('POST', '/api/analyze', self.analyze_handler),
             ('GET', '/api/models', self.models_handler),
             ('WebSocket', '/ws', self.websocket_handler),
+            ('POST', '/api/certificate/generate', self.generate_certificate_handler),
+            ('GET', '/api/certificate/status/{cert_id}', self.certificate_status_handler),
+            ('GET', '/api/system/status', self.system_status_handler),
+            ('GET', '/certificate/waiting', self.waiting_page_handler),
+            ('GET', '/system/status', self.status_page_handler),
         ]
         
         for method, path, handler in api_routes:
@@ -350,6 +358,189 @@ class ShanDWebApp:
         
         else:
             return {'type': 'error', 'message': 'Unknown message type'}
+    
+    async def generate_certificate_handler(self, request):
+        """Handle certificate generation requests"""
+        try:
+            data = await request.json()
+            
+            # Extract certificate data
+            cert_data = {
+                'certificate_id': data.get('certificate_id', f"CERT-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
+                'user_name': data.get('name', ''),
+                'course_name': data.get('course', ''),
+                'issue_date': data.get('date', datetime.utcnow().strftime('%Y-%m-%d')),
+                'email': data.get('email', '')
+            }
+            
+            # Create database record
+            try:
+                certificate_db.create_certificate_record(cert_data)
+            except Exception as db_error:
+                self.logger.error(f"Database error: {db_error}")
+                # Continue even if record creation fails
+            
+            # Generate certificate
+            try:
+                cert_path = certificate_generator.generate_certificate({
+                    'certificate_id': cert_data['certificate_id'],
+                    'name': cert_data['user_name'],
+                    'course': cert_data['course_name'],
+                    'date': cert_data['issue_date']
+                })
+                
+                # Log successful attempt
+                certificate_db.log_attempt(cert_data['certificate_id'], 'success')
+                
+                # Compare with template
+                comparison = certificate_generator.compare_with_template(cert_path)
+                
+                # Update file path in database
+                certificate_db.update_certificate_path(cert_data['certificate_id'], str(cert_path))
+                
+                # Send email if configured and email provided
+                email_result = None
+                if cert_data['email'] and mail_config.is_configured():
+                    email_result = mail_config.send_certificate(
+                        cert_data['email'],
+                        cert_path,
+                        cert_data['user_name'],
+                        cert_data['certificate_id']
+                    )
+                
+                return web.json_response({
+                    'success': True,
+                    'certificate_id': cert_data['certificate_id'],
+                    'file_path': str(cert_path),
+                    'comparison': comparison,
+                    'email_sent': email_result.get('success', False) if email_result else False
+                })
+                
+            except Exception as gen_error:
+                # Log failed attempt
+                certificate_db.log_attempt(
+                    cert_data['certificate_id'],
+                    'failed',
+                    str(gen_error)
+                )
+                raise gen_error
+            
+        except Exception as e:
+            self.logger.error(f"Certificate generation error: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def certificate_status_handler(self, request):
+        """Get certificate generation status"""
+        cert_id = request.match_info['cert_id']
+        
+        try:
+            cert_info = certificate_db.get_certificate(cert_id)
+            
+            if not cert_info:
+                return web.json_response({
+                    'error': 'Certificate not found'
+                }, status=404)
+            
+            return web.json_response({
+                'certificate_id': cert_id,
+                'status': cert_info['status'],
+                'attempts': cert_info['attempts'],
+                'created_at': cert_info['created_at'],
+                'updated_at': cert_info['updated_at']
+            })
+            
+        except Exception as e:
+            self.logger.error(f"Error fetching certificate status: {e}")
+            return web.json_response({
+                'error': str(e)
+            }, status=500)
+    
+    async def system_status_handler(self, request):
+        """Get comprehensive system status"""
+        try:
+            # Get mail configuration status
+            mail_status = mail_config.get_status()
+            
+            # Get certificate system status
+            template_exists = certificate_generator.template_path.exists()
+            
+            # Get database status
+            db_connected = True
+            tables_count = 2  # certificates and certificate_attempts
+            try:
+                conn = certificate_db.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM certificates")
+                total_certs = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM certificates WHERE status='success'")
+                success_certs = cursor.fetchone()[0]
+                conn.close()
+                
+                success_rate = (success_certs / total_certs * 100) if total_certs > 0 else 0
+            except Exception as db_error:
+                self.logger.error(f"Database query error: {db_error}")
+                db_connected = False
+                total_certs = 0
+                success_rate = 0
+            
+            # Get bot status
+            bot_running = self.shan_d_bot is not None
+            model_status = "online" if self.model_manager else "offline"
+            
+            return web.json_response({
+                'mail': mail_status,
+                'certificate': {
+                    'template_exists': template_exists,
+                    'total_generated': total_certs,
+                    'success_rate': round(success_rate, 2)
+                },
+                'database': {
+                    'connected': db_connected,
+                    'tables_count': tables_count,
+                    'schema_version': '1.0'
+                },
+                'bot': {
+                    'running': bot_running,
+                    'telegram': 'online' if bot_running else 'offline',
+                    'model_manager': model_status,
+                    'uptime': '00:00:00'  # TODO: Implement actual uptime tracking
+                },
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            self.logger.error(f"System status error: {e}")
+            return web.json_response({
+                'error': str(e)
+            }, status=500)
+    
+    async def waiting_page_handler(self, request):
+        """Serve the waiting page"""
+        static_dir = Path(__file__).parent.parent / "static"
+        waiting_page = static_dir / "waiting.html"
+        
+        if waiting_page.exists():
+            return web.FileResponse(waiting_page)
+        else:
+            return web.json_response({
+                'error': 'Waiting page not found'
+            }, status=404)
+    
+    async def status_page_handler(self, request):
+        """Serve the system status page"""
+        static_dir = Path(__file__).parent.parent / "static"
+        status_page = static_dir / "status.html"
+        
+        if status_page.exists():
+            return web.FileResponse(status_page)
+        else:
+            return web.json_response({
+                'error': 'Status page not found'
+            }, status=404)
+
 
 async def create_web_app(config: Dict[str, Any]) -> web.Application:
     """Factory function to create web application"""
